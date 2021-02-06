@@ -37,6 +37,7 @@ import com.google.ar.core.AugmentedImageDatabase;
 import com.google.ar.core.Camera;
 import com.google.ar.core.Config;
 import com.google.ar.core.Frame;
+import com.google.ar.core.Pose;
 import com.google.ar.core.Session;
 import com.google.ar.core.examples.java.augmentedimage.rendering.AugmentedImageRenderer;
 import com.google.ar.core.examples.java.common.helpers.CameraPermissionHelper;
@@ -357,10 +358,31 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
     for (Pair<AugmentedImage, Anchor> pair : augmentedImageMap.values()) {
       AugmentedImage augmentedImage = pair.first;
       Anchor centerAnchor = augmentedImageMap.get(augmentedImage.getIndex()).second;
+
+      Anchor[] teapotAnchors = {
+              session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+                      -0.3f * augmentedImage.getExtentX(),
+                      0.0f,
+                      -0.4f * augmentedImage.getExtentZ()))),
+              session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+                      -0.1f * augmentedImage.getExtentX(),
+                      0.0f,
+                      -0.4f * augmentedImage.getExtentZ()))),
+              session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+                      0.1f * augmentedImage.getExtentX(),
+                      0.0f,
+                      -0.4f * augmentedImage.getExtentZ()))),
+              session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+                      0.3f * augmentedImage.getExtentX(),
+                      0.0f,
+                      -0.4f * augmentedImage.getExtentZ())))
+      };
+
+      //Create 4 anchors for each teapot as well
       switch (augmentedImage.getTrackingState()) {
         case TRACKING:
           augmentedImageRenderer.draw(
-              viewmtx, projmtx, augmentedImage, centerAnchor, colorCorrectionRgba);
+              viewmtx, projmtx, augmentedImage, centerAnchor, colorCorrectionRgba, frame, teapotAnchors); //pass frame so we can do camera interaction
           break;
         default:
           break;
@@ -406,7 +428,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
 
   private Bitmap loadAugmentedImageBitmap() {
     Log.i("Loaded", "trying to load img!!");
-    try (InputStream is = getAssets().open("qr-code4.jpg")) {
+    try (InputStream is = getAssets().open("default.jpg")) {
       Log.i("Loaded", "Loaded img!!");
       return BitmapFactory.decodeStream(is);
     } catch (IOException e) {
