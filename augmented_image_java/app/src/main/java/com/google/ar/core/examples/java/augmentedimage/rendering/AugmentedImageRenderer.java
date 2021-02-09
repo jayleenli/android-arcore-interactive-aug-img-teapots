@@ -20,6 +20,7 @@ import com.google.ar.core.Anchor;
 import com.google.ar.core.AugmentedImage;
 import com.google.ar.core.Frame;
 import com.google.ar.core.Pose;
+
 import com.google.ar.core.examples.java.common.rendering.ObjectRenderer;
 import com.google.ar.core.examples.java.common.rendering.ObjectRenderer.BlendMode;
 import java.io.IOException;
@@ -203,13 +204,16 @@ public class AugmentedImageRenderer {
       teapot0.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
       teapot0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
+
 //      //Check for intersection with camera
       Pose cameraPose = frame.getCamera().getPose();
-      float dx = teapotPoses[0].tx() - cameraPose.tx();
-      float dy = teapotPoses[0].ty() - cameraPose.ty();
-      float dz = teapotPoses[0].tz() - cameraPose.tz();
+      float dx = teapotAnchors[0].getPose().tx() - cameraPose.tx();
+      float dy = teapotAnchors[0].getPose().ty() - cameraPose.ty();
+      float dz = teapotAnchors[0].getPose().tz() - cameraPose.tz();
       float distanceMeters = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-      Log.i("setText","Distance from camera: " + distanceMeters + " metres");
+      //Log.i("setText","Distance from camera: " + distanceMeters + " metres");
+
+
 
 //      frame.getCamera().getPose()
 //              .compose(Pose.makeTranslation(0, 0, -1f))

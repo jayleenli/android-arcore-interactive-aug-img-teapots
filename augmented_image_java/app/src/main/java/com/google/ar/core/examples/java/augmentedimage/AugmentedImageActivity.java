@@ -22,8 +22,10 @@ import android.net.Uri;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
+import android.view.Display;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -39,6 +41,9 @@ import com.google.ar.core.Config;
 import com.google.ar.core.Frame;
 import com.google.ar.core.Pose;
 import com.google.ar.core.Session;
+import com.google.ar.core.HitResult;
+import com.google.ar.core.Plane;
+import com.google.ar.core.Trackable;
 import com.google.ar.core.examples.java.augmentedimage.rendering.AugmentedImageRenderer;
 import com.google.ar.core.examples.java.common.helpers.CameraPermissionHelper;
 import com.google.ar.core.examples.java.common.helpers.DisplayRotationHelper;
@@ -53,12 +58,18 @@ import com.google.ar.core.exceptions.UnavailableSdkTooOldException;
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import com.google.ar.sceneform.AnchorNode;
+import com.google.ar.sceneform.Node;
+import com.google.ar.sceneform.math.Vector3;
+import com.google.ar.sceneform.rendering.ModelRenderable;
 /**
  * This app extends the HelloAR Java app to include image tracking functionality.
  *
@@ -96,6 +107,9 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
   // the
   // database.
   private final Map<Integer, Pair<AugmentedImage, Anchor>> augmentedImageMap = new HashMap<>();
+
+  DisplayMetrics displaymetrics = new DisplayMetrics();
+
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -359,30 +373,59 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
       AugmentedImage augmentedImage = pair.first;
       Anchor centerAnchor = augmentedImageMap.get(augmentedImage.getIndex()).second;
 
-      Anchor[] teapotAnchors = {
-              session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
-                      -0.3f * augmentedImage.getExtentX(),
-                      0.0f,
-                      -0.4f * augmentedImage.getExtentZ()))),
-              session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
-                      -0.1f * augmentedImage.getExtentX(),
-                      0.0f,
-                      -0.4f * augmentedImage.getExtentZ()))),
-              session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
-                      0.1f * augmentedImage.getExtentX(),
-                      0.0f,
-                      -0.4f * augmentedImage.getExtentZ()))),
-              session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
-                      0.3f * augmentedImage.getExtentX(),
-                      0.0f,
-                      -0.4f * augmentedImage.getExtentZ())))
-      };
 
+
+//      Vector3 point1, point2;
+//      AnchorNode anchorNode = new AnchorNode();
+//      point1 = lastAnchorNode.getWorldPosition();
+//      point2 = anchorNode.getWorldPosition();
+//      Node line = new Node();
       //Create 4 anchors for each teapot as well
       switch (augmentedImage.getTrackingState()) {
         case TRACKING:
+          Anchor[] teapotAnchors = {
+                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+                          -0.3f * augmentedImage.getExtentX(),
+                          0.0f,
+                          -0.4f * augmentedImage.getExtentZ()))),
+                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+                          -0.1f * augmentedImage.getExtentX(),
+                          0.0f,
+                          -0.4f * augmentedImage.getExtentZ()))),
+                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+                          0.1f * augmentedImage.getExtentX(),
+                          0.0f,
+                          -0.4f * augmentedImage.getExtentZ()))),
+                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+                          0.3f * augmentedImage.getExtentX(),
+                          0.0f,
+                          -0.4f * augmentedImage.getExtentZ())))
+          };
+
+
           augmentedImageRenderer.draw(
               viewmtx, projmtx, augmentedImage, centerAnchor, colorCorrectionRgba, frame, teapotAnchors); //pass frame so we can do camera interaction
+
+//          List<HitResult> test = frame.hitTest(0.0f, 0.0f);
+//          for(int i = 0; i < test.size(); i++) {
+//
+//            Log.i("hit res", test.get(i).toString());
+//          }
+
+          getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+          float y_pos = displaymetrics.heightPixels/2.0f;
+          float x_pos = displaymetrics.widthPixels/2.0f;
+
+          for (HitResult hit : frame.hitTest(x_pos,y_pos)) {
+            Trackable trackable = hit.getTrackable();
+            if (trackable instanceof AugmentedImage ) { //HIT TEST CAN NOT ONLY DO PLANES!!
+              //&& ((Plane) trackable).isPoseInPolygon(hit.getHitPose())
+              //Plane plane = (Plane) trackable;
+              Log.i("HIT", "HIT ");
+              break;
+            }
+          }
+
           break;
         default:
           break;
