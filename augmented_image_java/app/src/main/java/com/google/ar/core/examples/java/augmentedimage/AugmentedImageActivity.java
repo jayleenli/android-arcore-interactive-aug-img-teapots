@@ -59,6 +59,7 @@ import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationExceptio
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Collection;
 import java.util.HashMap;
@@ -387,41 +388,69 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
                   session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
                           -0.3f * augmentedImage.getExtentX(),
                           0.0f,
-                          -0.4f * augmentedImage.getExtentZ()))),
+                          -0.3f * augmentedImage.getExtentZ()))),
                   session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
                           -0.1f * augmentedImage.getExtentX(),
                           0.0f,
-                          -0.4f * augmentedImage.getExtentZ()))),
+                          -0.3f * augmentedImage.getExtentZ()))),
                   session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
                           0.1f * augmentedImage.getExtentX(),
                           0.0f,
-                          -0.4f * augmentedImage.getExtentZ()))),
+                          -0.3f * augmentedImage.getExtentZ()))),
                   session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
                           0.3f * augmentedImage.getExtentX(),
                           0.0f,
-                          -0.4f * augmentedImage.getExtentZ())))
+                          -0.3f * augmentedImage.getExtentZ())))
           };
 
+          //Calculte the scale factor
+          final float teapot_edge_size = 132113.73f; // Magic number of teapot size
+          final float max_image_edge = Math.max(augmentedImage.getExtentX(), augmentedImage.getExtentZ()); // Get largest detected image edge size
 
+          float teapotScaleFactor = max_image_edge / (teapot_edge_size * 5);
           augmentedImageRenderer.draw(
-              viewmtx, projmtx, augmentedImage, centerAnchor, colorCorrectionRgba, frame, teapotAnchors); //pass frame so we can do camera interaction
+                  viewmtx, projmtx, augmentedImage, centerAnchor, colorCorrectionRgba, frame, teapotAnchors); //pass frame so we can do camera interaction
 
-//          List<HitResult> test = frame.hitTest(0.0f, 0.0f);
-//          for(int i = 0; i < test.size(); i++) {
-//
-//            Log.i("hit res", test.get(i).toString());
-//          }
 
           getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
-          float y_pos = displaymetrics.heightPixels/2.0f;
-          float x_pos = displaymetrics.widthPixels/2.0f;
+          float y_pos = displaymetrics.heightPixels / 2.0f;
+          float x_pos = displaymetrics.widthPixels / 2.0f;
 
-          for (HitResult hit : frame.hitTest(x_pos,y_pos)) {
+//          ////////////////////////////////DE BUG TRASH
+//
+//          float teapot_x = 132113.73f;
+//          float teapot_y = 68599.69f;
+//          float teapot_z = 82209.81f;
+//
+//          //Annoying basically have to undo the same translation I'm sure
+//          float[] P1 = {teapotAnchors[0].getPose().tx() - (teapot_x/2.0f)*teapotScaleFactor,
+//                  teapotAnchors[0].getPose().ty() + (teapot_y/2.0f)*teapotScaleFactor,
+//                  teapotAnchors[0].getPose().tz() + (teapot_z/2.0f)*teapotScaleFactor};
+////          float[] P1 = {teapotAnchors[0].getPose().tx(),
+////                  teapotAnchors[0].getPose().ty() ,
+////                  teapotAnchors[0].getPose().tz()};
+//          float[] P2 = {P1[0], P1[1], P1[2]+teapot_z*teapotScaleFactor};
+//          float[] P4 = {P1[0]+teapot_x*teapotScaleFactor, P1[1], P1[2]};
+//          float[] P5 = {P1[0], P1[1]+teapot_y*teapotScaleFactor, P1[2]};
+//          augmentedImageRenderer.debug_draw(
+//                  viewmtx, projmtx, augmentedImage, teapotAnchors[0], colorCorrectionRgba,P1, P2, P4, P5);
+//          //////////////////////////////////DEBUG TRASH END
+          if (cameraTouchingBoundingSphere(frame, teapotAnchors, 0, teapotScaleFactor)) {
+            Log.i("HIT", "TOUCH BOUNDING");
+
+          }
+
+          for (HitResult hit : frame.hitTest(x_pos, y_pos)) {
             Trackable trackable = hit.getTrackable();
-            if (trackable instanceof AugmentedImage ) { //HIT TEST CAN NOT ONLY DO PLANES!!
+            if (trackable instanceof AugmentedImage) { //HIT TEST CAN NOT ONLY DO PLANES!!
               //&& ((Plane) trackable).isPoseInPolygon(hit.getHitPose())
               //Plane plane = (Plane) trackable;
-              Log.i("HIT", "HIT ");
+              //Log.i("HIT", "HIT and check bounding box");
+
+              //Check if in bounding box
+
+
+
               break;
             }
           }
@@ -432,6 +461,144 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
       }
     }
   }
+
+  private boolean cameraTouchingBoundingSphere(Frame frame, Anchor[] teapotAnchors, int teapot_id, float teapotScaleFactor) {
+    float teapot_r = (132113.73f/2.0f)*teapotScaleFactor*1.1f; // increase
+    getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+    float y_pos = displaymetrics.heightPixels / 2.0f;
+    float x_pos = displaymetrics.widthPixels / 2.0f;
+    for (HitResult hit : frame.hitTest(x_pos, y_pos)) {
+      Trackable trackable = hit.getTrackable();
+      if (trackable instanceof AugmentedImage) {
+        Pose poseHit = hit.getHitPose();
+        Pose cameraPose = frame.getCamera().getPose(); // need to check if camera is decently close
+        float cdx = teapotAnchors[teapot_id].getPose().tx() - cameraPose.tx();
+        float cdy = teapotAnchors[teapot_id].getPose().ty() - cameraPose.ty();
+        float cdz = teapotAnchors[teapot_id].getPose().tz() - cameraPose.tz();
+        float cdistanceMeters = (float) Math.sqrt(cdx * cdx + cdy * cdy + cdz * cdz);
+
+        float dx = teapotAnchors[teapot_id].getPose().tx() - poseHit.tx();
+        float dy = teapotAnchors[teapot_id].getPose().ty() - poseHit.ty();
+        float dz = teapotAnchors[teapot_id].getPose().tz() - poseHit.tz();
+        float distanceMeters = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+//        Log.i("r ", Float.toString(teapot_r));
+//        Log.i("distance " + teapot_id,"Distance from camera: " + distanceMeters + " metres" + cdistanceMeters + " metres");
+        if (distanceMeters <  teapot_r && cdistanceMeters <= .15f) {
+          return true;
+        }
+
+      }
+    }
+
+    return false;
+
+  }
+
+  private boolean cameraTouchingTeapotBoundingBox(Frame frame, Anchor[] teapotAnchors, int teapot_id, float teapotScaleFactor){
+    // JK FUNCTION IS BROKEN GOING TO SPHERE...
+    // ARCore doesn't have way to detect bounding box so do it manually
+    // The dimensions of teapot bounding box X 132113.73 Y 68599.69, Z 82209.81.
+    // I have set up so the models are always centered at anchors (painfully). I guess in project going to have to do this manually :(
+    float teapot_x = 132113.73f;
+    float teapot_y = 68599.69f;
+    float teapot_z = 82209.81f;
+
+    //SIMPLER BOUNDING BOX NO FANCY CROSS OR DOT PROD
+    float[] lowBound =  {teapotAnchors[0].getPose().tx() - (teapot_x/2.0f)*teapotScaleFactor,
+            teapotAnchors[0].getPose().ty() + (teapot_y/2.0f)*teapotScaleFactor,
+            teapotAnchors[0].getPose().tz() + (teapot_z/2.0f)*teapotScaleFactor};
+    float[] otherBound = {lowBound[0] + teapot_x * teapotScaleFactor, lowBound[1] + teapot_y * teapotScaleFactor, lowBound[2] + teapot_z * teapotScaleFactor}; //minus y because of how coordinate system is
+    Pose cameraPose = frame.getCamera().getPose();
+    float[] cameraPos = {cameraPose.tx(), cameraPose.ty(), cameraPose.tz()};
+
+    Log.i("POS c", Arrays.toString(cameraPos));
+    Log.i("POS l", Arrays.toString(lowBound));
+    Log.i("POS h", Arrays.toString(otherBound));
+
+    if ((lowBound[0] <= cameraPos[0] && cameraPos[0] <= otherBound[0]) &&
+        (lowBound[1] <= cameraPos[1] && cameraPos[1] <= otherBound[1]) &&
+        (lowBound[2] <= cameraPos[2] && cameraPos[2] <= otherBound[2])){
+      return true;
+    }
+    return false;
+
+      /*
+        Bounding box formula
+           .+------+
+         .' |    .'|
+      P5+---+--+'  |
+        |   |  |   |
+        |P2,+--+---+
+        |.'    | .'
+     P1 +------+'P4
+
+        Considering edges that are not perpendicular "You need vectors that are perpendicular to the faces of the box
+
+        u=(P1−P4)×(P1−P5)
+        v=(P1−P2)×(P1−P5)
+        w=(P1−P2)×(P1−P4)
+
+        "A point x lies within the box when three following constraints are respected.
+        The dot product u.x is between u.P1 and u.P2
+        The dot product v.x is between v.P1 and v.P4
+        The dot product w.x is between w.P1 and w.P5"
+       */
+
+
+//      //Annoying basically have to undo the same translation I'm sure
+//      float[] P1 = {teapotAnchors[teapot_id].getPose().tx() - teapot_x/2.0f*teapotScaleFactor,
+//              teapotAnchors[teapot_id].getPose().ty() - teapot_y/2.0f*teapotScaleFactor,
+//              teapotAnchors[teapot_id].getPose().tz() - teapot_z/2.0f*teapotScaleFactor};
+//      float[] P2 = {P1[0], P1[1], P1[2]+teapot_z*teapotScaleFactor};
+//      float[] P4 = {P1[0]+teapot_x*teapotScaleFactor, P1[1], P1[2]};
+//      float[] P5 = {P1[0], P1[1]+teapot_y*teapotScaleFactor, P1[2]};
+//
+//      float[] u = crossProduct(subtractArrays(P1, P4), subtractArrays(P1, P5));
+//      float[] v = crossProduct(subtractArrays(P1, P2), subtractArrays(P1, P5));
+//      float[] w = crossProduct(subtractArrays(P1, P2), subtractArrays(P1, P4));
+//
+//
+//      Pose cameraPose = frame.getCamera().getPose();
+//      float[] cameraPos = {cameraPose.tx(), cameraPose.ty(), cameraPose.tz()};
+//
+//      if ((dotProduct(u,P1) < dotProduct(u,cameraPos) && dotProduct(u,cameraPos) < dotProduct(u,P2)) &&
+//          (dotProduct(v,P1) < dotProduct(v,cameraPos) && dotProduct(v,cameraPos) < dotProduct(v,P4)) &&
+//          (dotProduct(w,P1) < dotProduct(w,cameraPos) && dotProduct(w,cameraPos) < dotProduct(w,P5))
+//      ) {
+//        return true;
+//      }
+//      return false;
+  }
+
+  private float dotProduct(float x[], float y[]){
+    if (x.length != y.length)
+      throw new RuntimeException("Arrays must be same size");
+    float sum = 0;
+    for (int i = 0; i < x.length; i++)
+      sum += x[i] * y[i];
+    return sum;
+  }
+  // Function to find
+  // cross product of two vector array.
+  private float[] crossProduct(float vect_A[], float vect_B[])
+  {
+    float cross_P[] = new float[3];
+    cross_P[0] = vect_A[1] * vect_B[2] - vect_A[2] * vect_B[1];
+    cross_P[1] = vect_A[2] * vect_B[0] - vect_A[0] * vect_B[2];
+    cross_P[2] = vect_A[0] * vect_B[1] - vect_A[1] * vect_B[0];
+    return cross_P;
+  }
+
+  //Sub vect_A - vect_B
+  private float[] subtractArrays(float vect_A[], float vect_B[])
+  {
+    float sub_P[] = new float[3];
+    sub_P[0] = vect_A[0] - vect_B[0];
+    sub_P[1] = vect_A[1] - vect_B[1];
+    sub_P[2] = vect_A[2] - vect_B[2];
+    return sub_P;
+  }
+
 
   private boolean setupAugmentedImageDatabase(Config config) {
     AugmentedImageDatabase augmentedImageDatabase;

@@ -51,6 +51,11 @@ public class AugmentedImageRenderer {
   private final ObjectRenderer teapot2 = new ObjectRenderer();
   private final ObjectRenderer teapot3 = new ObjectRenderer();
 
+  private final ObjectRenderer debugAndy0 = new ObjectRenderer();
+  private final ObjectRenderer debugAndy1 = new ObjectRenderer();
+  private final ObjectRenderer debugAndy2 = new ObjectRenderer();
+  private final ObjectRenderer debugAndy3 = new ObjectRenderer();
+
 
   private Pose[] teapotPoses = new Pose[4];
 
@@ -84,6 +89,22 @@ public class AugmentedImageRenderer {
               context, "models/Teapot.obj", "models/frame_base.png");
       teapot3.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
+
+      debugAndy0.createOnGlThread(
+              context, "models/andy.obj", "models/andy.png");
+      debugAndy0.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
+
+      debugAndy1.createOnGlThread(
+                context, "models/andy.obj", "models/andy.png");
+      debugAndy1.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
+
+      debugAndy2.createOnGlThread(
+                context, "models/andy.obj", "models/andy.png");
+      debugAndy2.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
+
+      debugAndy3.createOnGlThread(
+                context, "models/andy.obj", "models/andy.png");
+      debugAndy3.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
       //imageFrameUpperLeft.setBlendMode(BlendMode.AlphaBlending);
   }
@@ -154,30 +175,6 @@ public class AugmentedImageRenderer {
 //                  -427295.75f * teapotScaleFactor + 0.0f,
 //                  -218310.41f * teapotScaleFactor + -0.4f * augmentedImage.getExtentZ()), // upper right
 //        };
-      //Log.i("Tag", "scale is " + teapotScaleFactor);
-
-//      Pose[] worldBoundaryPoses = new Pose[4];
-//
-//
-//      for (int i = 0; i < 4; ++i) {
-//          worldBoundaryPoses[i] = anchorPose.compose(localBoundaryPoses[i]);
-//      }
-
-//      worldBoundaryPoses[0].toMatrix(modelMatrix, 0);
-//      teapotLeft.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
-//      teapotLeft.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
-
-//      worldBoundaryPoses[1].toMatrix(modelMatrix, 0);
-//      teapotMidLeft.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
-//      teapotMidLeft.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
-//
-//      worldBoundaryPoses[2].toMatrix(modelMatrix, 0);
-//      teapotMidRight.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
-//      teapotMidRight.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
-//
-//      worldBoundaryPoses[3].toMatrix(modelMatrix, 0);
-//      teapotRight.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
-//      teapotRight.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
       for (int i = 0; i < 4; ++i) {
           Pose teapotPose = teapotAnchors[i].getPose().compose(Pose.makeTranslation(
@@ -211,7 +208,7 @@ public class AugmentedImageRenderer {
       float dy = teapotAnchors[0].getPose().ty() - cameraPose.ty();
       float dz = teapotAnchors[0].getPose().tz() - cameraPose.tz();
       float distanceMeters = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-      //Log.i("setText","Distance from camera: " + distanceMeters + " metres");
+      Log.i("setText","Distance from camera: " + distanceMeters + " metres");
 
 
 
@@ -224,6 +221,76 @@ public class AugmentedImageRenderer {
 //      anchorNode.setParent(arFragment.getArSceneView().getScene());
   }
 
+  public void debug_draw(
+          float[] viewMatrix,
+          float[] projectionMatrix,
+          AugmentedImage augmentedImage,
+          Anchor targetAnchor,
+          float[] colorCorrectionRgba,
+          float[] point0, float[] point1, float[] point2, float[] point3) {
+    float[] tintColor =
+            convertHexToColor(TINT_COLORS_HEX[augmentedImage.getIndex() % TINT_COLORS_HEX.length]);
+    float[] modelMatrix = new float[16];
+
+    Pose andyPose0 = Pose.makeTranslation(
+            point0[0],
+            point0[1],
+            point0[2]);
+
+    andyPose0.toMatrix(modelMatrix, 0);
+    debugAndy0.updateModelMatrix(modelMatrix, .1f, .1f, .1f);
+    debugAndy0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
+
+    Pose andyPose1 = Pose.makeTranslation(
+            point1[0],
+            point1[1],
+            point1[2]);
+
+    andyPose1.toMatrix(modelMatrix, 0);
+    debugAndy1.updateModelMatrix(modelMatrix, .1f, .1f, .1f);
+    debugAndy1.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
+
+
+    Pose andyPose2 = Pose.makeTranslation(
+            point2[0],
+            point2[1],
+            point2[2]);
+
+    andyPose2.toMatrix(modelMatrix, 0);
+    debugAndy2.updateModelMatrix(modelMatrix, .1f, .1f, .1f);
+    debugAndy2.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
+
+
+    Pose andyPose3 = Pose.makeTranslation(
+            point3[0],
+            point3[1],
+            point3[2]);
+
+    andyPose3.toMatrix(modelMatrix, 0);
+    debugAndy3.updateModelMatrix(modelMatrix, .1f, .1f, .1f);
+    debugAndy3.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
+}
+
+  public void debug_draw(
+          float[] viewMatrix,
+          float[] projectionMatrix,
+          AugmentedImage augmentedImage,
+          Anchor targetAnchor,
+          float[] colorCorrectionRgba,
+          float[] point0) {
+    float[] tintColor =
+            convertHexToColor(TINT_COLORS_HEX[augmentedImage.getIndex() % TINT_COLORS_HEX.length]);
+    float[] modelMatrix = new float[16];
+
+    Pose andyPose0 = Pose.makeTranslation(
+            point0[0],
+            point0[1],
+            point0[2]);
+
+    andyPose0.toMatrix(modelMatrix, 0);
+    debugAndy0.updateModelMatrix(modelMatrix, .05f, .05f, .05f);
+    debugAndy0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
+  }
   private static float[] convertHexToColor(int colorHex) {
     // colorHex is in 0xRRGGBB format
     float red = ((colorHex & 0xFF0000) >> 16) / 255.0f * TINT_INTENSITY;
