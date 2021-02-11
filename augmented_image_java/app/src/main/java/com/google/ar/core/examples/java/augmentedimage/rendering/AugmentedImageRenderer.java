@@ -23,7 +23,11 @@ import com.google.ar.core.Pose;
 
 import com.google.ar.core.examples.java.common.rendering.ObjectRenderer;
 import com.google.ar.core.examples.java.common.rendering.ObjectRenderer.BlendMode;
+import com.google.ar.sceneform.math.Quaternion;
+
 import java.io.IOException;
+
+import android.opengl.Matrix;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -44,8 +48,6 @@ public class AugmentedImageRenderer {
     Because the maze should attach to the image, it makes sense to put the mazeRenderer inside the AugmentedImageRenderer class.
    */
 
-
-  //private ObjectRenderer[] teapotObjectRenderer = new ObjectRenderer[4];
   private final ObjectRenderer teapot0 = new ObjectRenderer();
   private final ObjectRenderer teapot1 = new ObjectRenderer();
   private final ObjectRenderer teapot2 = new ObjectRenderer();
@@ -58,8 +60,6 @@ public class AugmentedImageRenderer {
 
 
   private Pose[] teapotPoses = new Pose[4];
-
-//  private final ObjectRenderer mazeRenderer = new ObjectRenderer();
 
   public AugmentedImageRenderer() {}
 
@@ -89,7 +89,7 @@ public class AugmentedImageRenderer {
               context, "models/Teapot.obj", "models/frame_base.png");
       teapot3.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
-
+      //Debug Andys
       debugAndy0.createOnGlThread(
               context, "models/andy.obj", "models/andy.png");
       debugAndy0.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
@@ -116,7 +116,8 @@ public class AugmentedImageRenderer {
       Anchor centerAnchor,
       float[] colorCorrectionRgba,
       @NonNull Frame frame,
-      Anchor[] teapotAnchors) {
+      Anchor[] teapotAnchors,
+      int pickedUpTeapot) {
       float[] tintColor =
           convertHexToColor(TINT_COLORS_HEX[augmentedImage.getIndex() % TINT_COLORS_HEX.length]);
 
@@ -130,18 +131,9 @@ public class AugmentedImageRenderer {
 //      float[] modelMatrix = new float[16];
 //
 //      // OpenGL Matrix operation is in the order: Scale, rotation and Translation
-//      // So the manual adjustment is after scale
-//      // The 251.3f and 129.0f is magic number from the maze obj file
-//      // We need to do this adjustment because the maze obj file
+//      // We need to do this adjustment because the obj file
 //      // is not centered around origin. Normally when you
 //      // work with your own model, you don't have this problem.
-//      Pose mozeModelLocalOffset = Pose.makeTranslation(
-//              262143.57f * mazsScaleFactor,
-//              -427295.75f * mazsScaleFactor,
-//              -218310.41f * mazsScaleFactor);
-//      anchorPose.compose(mozeModelLocalOffset).toMatrix(modelMatrix, 0);
-//      mazeRenderer.updateModelMatrix(modelMatrix, mazsScaleFactor,mazsScaleFactor,mazsScaleFactor);
-//      mazeRenderer.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
       final float teapot_edge_size = 132113.73f; // Magic number of teapot size
       final float max_image_edge = Math.max(augmentedImage.getExtentX(), augmentedImage.getExtentZ()); // Get largest detected image edge size
@@ -182,34 +174,31 @@ public class AugmentedImageRenderer {
                   -427295.75f * teapotScaleFactor,
                   -218310.41f * teapotScaleFactor));
           teapotPoses[i] = teapotPose;
-
+      }
+      //Check for pickedUp
+      if (pickedUpTeapot != -1) {
+        teapotPoses[pickedUpTeapot] = frame.getCamera().getPose().compose(Pose.makeTranslation(
+                262143.57f * teapotScaleFactor,
+                -427295.75f * teapotScaleFactor,
+                -218310.41f * teapotScaleFactor)).compose(Pose.makeTranslation(0, 0, -0.1f));
       }
 
       teapotPoses[0].toMatrix(modelMatrix, 0);
+      //Matrix.rotateM(modelMatrix, 0, 90f, 0f, 1f, 0f);
       teapot0.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
       teapot0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
       teapotPoses[1].toMatrix(modelMatrix, 0);
-      teapot0.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
-      teapot0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
+      teapot1.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
+      teapot1.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
       teapotPoses[2].toMatrix(modelMatrix, 0);
-      teapot0.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
-      teapot0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
+      teapot2.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
+      teapot2.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
       teapotPoses[3].toMatrix(modelMatrix, 0);
-      teapot0.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
-      teapot0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
-
-
-//      //Check for intersection with camera
-      Pose cameraPose = frame.getCamera().getPose();
-      float dx = teapotAnchors[0].getPose().tx() - cameraPose.tx();
-      float dy = teapotAnchors[0].getPose().ty() - cameraPose.ty();
-      float dz = teapotAnchors[0].getPose().tz() - cameraPose.tz();
-      float distanceMeters = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-      Log.i("setText","Distance from camera: " + distanceMeters + " metres");
-
+      teapot3.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
+      teapot3.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
 
 //      frame.getCamera().getPose()

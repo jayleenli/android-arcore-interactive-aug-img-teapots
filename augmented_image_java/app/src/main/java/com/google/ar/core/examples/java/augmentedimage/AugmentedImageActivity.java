@@ -110,7 +110,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
   private final Map<Integer, Pair<AugmentedImage, Anchor>> augmentedImageMap = new HashMap<>();
 
   DisplayMetrics displaymetrics = new DisplayMetrics();
-
+  private int pickedUpTeapot = -1; //-1 if not picked up, id if true
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -408,52 +408,18 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
           final float max_image_edge = Math.max(augmentedImage.getExtentX(), augmentedImage.getExtentZ()); // Get largest detected image edge size
 
           float teapotScaleFactor = max_image_edge / (teapot_edge_size * 5);
-          augmentedImageRenderer.draw(
-                  viewmtx, projmtx, augmentedImage, centerAnchor, colorCorrectionRgba, frame, teapotAnchors); //pass frame so we can do camera interaction
+          //Check if camera is hitting one of the teapots
 
-
-          getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
-          float y_pos = displaymetrics.heightPixels / 2.0f;
-          float x_pos = displaymetrics.widthPixels / 2.0f;
-
-//          ////////////////////////////////DE BUG TRASH
-//
-//          float teapot_x = 132113.73f;
-//          float teapot_y = 68599.69f;
-//          float teapot_z = 82209.81f;
-//
-//          //Annoying basically have to undo the same translation I'm sure
-//          float[] P1 = {teapotAnchors[0].getPose().tx() - (teapot_x/2.0f)*teapotScaleFactor,
-//                  teapotAnchors[0].getPose().ty() + (teapot_y/2.0f)*teapotScaleFactor,
-//                  teapotAnchors[0].getPose().tz() + (teapot_z/2.0f)*teapotScaleFactor};
-////          float[] P1 = {teapotAnchors[0].getPose().tx(),
-////                  teapotAnchors[0].getPose().ty() ,
-////                  teapotAnchors[0].getPose().tz()};
-//          float[] P2 = {P1[0], P1[1], P1[2]+teapot_z*teapotScaleFactor};
-//          float[] P4 = {P1[0]+teapot_x*teapotScaleFactor, P1[1], P1[2]};
-//          float[] P5 = {P1[0], P1[1]+teapot_y*teapotScaleFactor, P1[2]};
-//          augmentedImageRenderer.debug_draw(
-//                  viewmtx, projmtx, augmentedImage, teapotAnchors[0], colorCorrectionRgba,P1, P2, P4, P5);
-//          //////////////////////////////////DEBUG TRASH END
-          if (cameraTouchingBoundingSphere(frame, teapotAnchors, 0, teapotScaleFactor)) {
-            Log.i("HIT", "TOUCH BOUNDING");
-
-          }
-
-          for (HitResult hit : frame.hitTest(x_pos, y_pos)) {
-            Trackable trackable = hit.getTrackable();
-            if (trackable instanceof AugmentedImage) { //HIT TEST CAN NOT ONLY DO PLANES!!
-              //&& ((Plane) trackable).isPoseInPolygon(hit.getHitPose())
-              //Plane plane = (Plane) trackable;
-              //Log.i("HIT", "HIT and check bounding box");
-
-              //Check if in bounding box
-
-
-
-              break;
+          for (int i = 0; i < 4; i++) {
+            if (pickedUpTeapot == -1 && cameraTouchingBoundingSphere(frame, teapotAnchors, i, teapotScaleFactor)) {
+              Log.i("HIT", "TOUCH BOUNDING TEAPOT ID " + i);
+              //Remove that teapot's anchor?
+              pickedUpTeapot = i;
             }
           }
+
+          augmentedImageRenderer.draw(
+                  viewmtx, projmtx, augmentedImage, centerAnchor, colorCorrectionRgba, frame, teapotAnchors, pickedUpTeapot); //pass frame so we can do camera interaction
 
           break;
         default:
@@ -486,12 +452,9 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
         if (distanceMeters <  teapot_r && cdistanceMeters <= .15f) {
           return true;
         }
-
       }
     }
-
     return false;
-
   }
 
   private boolean cameraTouchingTeapotBoundingBox(Frame frame, Anchor[] teapotAnchors, int teapot_id, float teapotScaleFactor){
