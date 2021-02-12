@@ -60,6 +60,7 @@ public class AugmentedImageRenderer {
 
 
   private Pose[] teapotPoses = new Pose[4];
+  private float[] teapotDegrees = {0, 0, 0, 0};
   private float degreeIncTest = 0;
 
   public AugmentedImageRenderer() {}
@@ -72,6 +73,8 @@ public class AugmentedImageRenderer {
 //    mazeRenderer.createOnGlThread(
 //            context, "models/Teapot.obj", "models/frame_base.png");
 //    mazeRenderer.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
+
+
 
 
       teapot0.createOnGlThread(
@@ -143,32 +146,6 @@ public class AugmentedImageRenderer {
       float teapotScaleFactor = max_image_edge / (teapot_edge_size*5); // scale to set Maze to image size
       float[] modelMatrix = new float[16];
 
-//      //Rotate teapot
-//      float[] trans = {262143.57f * teapotScaleFactor + -0.0f * augmentedImage.getExtentX(),
-//              -427295.75f * teapotScaleFactor + 0.0f,
-//              -218310.41f * teapotScaleFactor + -0.3f * augmentedImage.getExtentZ()};
-//      float[] rotate = {0.0f, 1.0f, 0.0f, 0.7071068f};
-//      Pose teapotRotate = new Pose(trans, rotate);
-
-//      Pose[] localBoundaryPoses = {
-//          Pose.makeTranslation(
-//                      262143.57f * teapotScaleFactor + -0.30f * augmentedImage.getExtentX(),
-//                      -427295.75f * teapotScaleFactor + 0.0f,
-//                      -218310.41f * teapotScaleFactor + -0.4f * augmentedImage.getExtentZ()), // upper mid left
-//          Pose.makeTranslation(
-//                  262143.57f * teapotScaleFactor + -0.10f * augmentedImage.getExtentX(),
-//                  -427295.75f * teapotScaleFactor + 0.0f,
-//                  -218310.41f * teapotScaleFactor + -0.4f * augmentedImage.getExtentZ()), // upper mid left
-//          Pose.makeTranslation(
-//                  262143.57f * teapotScaleFactor + 0.10f * augmentedImage.getExtentX(),
-//                  -427295.75f * teapotScaleFactor + 0.0f,
-//                  -218310.41f * teapotScaleFactor + -0.4f * augmentedImage.getExtentZ()), // upper mid right
-//          Pose.makeTranslation(
-//                  262143.57f * teapotScaleFactor + 0.3f * augmentedImage.getExtentX(),
-//                  -427295.75f * teapotScaleFactor + 0.0f,
-//                  -218310.41f * teapotScaleFactor + -0.4f * augmentedImage.getExtentZ()), // upper right
-//        };
-
       for (int i = 0; i < 4; ++i) {
           Pose teapotPose = teapotAnchors[i].getPose().compose(Pose.makeTranslation(
                   262143.57f * teapotScaleFactor,
@@ -178,20 +155,29 @@ public class AugmentedImageRenderer {
       }
       //Check for pickedUp
       if (pickedUpTeapot != -1) {
-        teapotPoses[pickedUpTeapot] = frame.getCamera().getPose().compose(Pose.makeTranslation(
+        teapotPoses[pickedUpTeapot] = frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.15f).compose(Pose.makeRotation(.66f,0f,0f,.77f)) //up pose
+                .compose(Pose.makeTranslation(
                 262143.57f * teapotScaleFactor,
                 -427295.75f * teapotScaleFactor,
-                -218310.41f * teapotScaleFactor)).compose(Pose.makeTranslation(0, 0, -0.1f));
+                -218310.41f * teapotScaleFactor)));
+
+        //Log.i("aug image rotatae", centerAnchor.getPose().extractRotation().toString());
+
+//        Pose andyPose0 = frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.5f).compose(Pose.makeRotation(.66f,0f,0f,.77f)));
+//
+//        andyPose0.toMatrix(modelMatrix, 0);
+//        debugAndy0.updateModelMatrix(modelMatrix, 1f, 1f, 1f);
+//        debugAndy0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
       }
 
       //TESTING
 //      degreeIncTest += 90;
-      if (degreeIncTest == 360) {
-        degreeIncTest = 0;
-      }
-    degreeIncTest++;
+//      if (degreeIncTest == 360) {
+//        degreeIncTest = 0;
+//      }
+//    degreeIncTest++;
     //degreeIncTest = 15;
-      modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[0], teapotAnchors[0], degreeIncTest, teapotScaleFactor);
+      modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[0], teapotDegrees[0], teapotScaleFactor);
 
 
       //test.toMatrix(modelMatrix, 0);
@@ -200,18 +186,22 @@ public class AugmentedImageRenderer {
       teapot0.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
       teapot0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
-      teapotPoses[1].toMatrix(modelMatrix, 0);
+      //teapotPoses[1].toMatrix(modelMatrix, 0);
+      modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[1], teapotDegrees[1], teapotScaleFactor);
       teapot1.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
       teapot1.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
-      teapotPoses[2].toMatrix(modelMatrix, 0);
+      //teapotPoses[2].toMatrix(modelMatrix, 0);
+    modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[2], teapotDegrees[2], teapotScaleFactor);
       teapot2.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
       teapot2.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
-    teapotAnchors[0].getPose().compose(Pose.makeTranslation(
-            2.0f * 262143.57f * teapotScaleFactor,
-            -427295.75f * teapotScaleFactor,
-            2.0f * -218310.41f * teapotScaleFactor)).toMatrix(modelMatrix, 0);
+      //Where the center of the rotation is
+//    teapotAnchors[0].getPose().compose(Pose.makeTranslation(
+//            2.0f * 262143.57f * teapotScaleFactor,
+//            -427295.75f * teapotScaleFactor,
+//            2.0f * -218310.41f * teapotScaleFactor)).toMatrix(modelMatrix, 0);
+    modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[3], teapotDegrees[3], teapotScaleFactor);
     teapot3.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
     teapot3.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
@@ -225,7 +215,7 @@ public class AugmentedImageRenderer {
 //      anchorNode.setParent(arFragment.getArSceneView().getScene());
   }
 
-  public float[] calculateAndReturnRotationTeapot(Pose modelPose, Anchor teapotAnchor, float degree, float teapotScaleFactor) {
+  public float[] calculateAndReturnRotationTeapot(Pose modelPose, float degree, float teapotScaleFactor) {
     //Because teapot is not centered in origin, figure out how the translation needs to change as a result
     //Assume teapot got moved so it was centered on the anchor...
     // My brain is too small to understand
@@ -242,12 +232,6 @@ public class AugmentedImageRenderer {
 
     // No need to move it back to the center because rotation not at origin
     Matrix.translateM(modelMatrix, 0,trans[0],0f,trans[1]);
-
-    //Translate it back to where the anchor is
-    //Matrix.translateM(modelMatrix, 0,-teapot_x,0f,-teapot_z);
-
-//    Pose testP = new Pose(modelMatrix, test);
-//    Pose rot = Pose.makeRotation(0f, 1f, 0f, 45f);
 
     return modelMatrix;
   }
@@ -348,7 +332,7 @@ public class AugmentedImageRenderer {
             point0[2]);
 
     andyPose0.toMatrix(modelMatrix, 0);
-    debugAndy0.updateModelMatrix(modelMatrix, .05f, .05f, .05f);
+    debugAndy0.updateModelMatrix(modelMatrix, .25f, .25f, .25f);
     debugAndy0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
   }
 

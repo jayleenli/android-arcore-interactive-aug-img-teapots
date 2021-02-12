@@ -111,6 +111,10 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
 
   DisplayMetrics displaymetrics = new DisplayMetrics();
   private int pickedUpTeapot = -1; //-1 if not picked up, id if true
+  private boolean putDownDisabled = false;
+  private boolean pickedUpDisabled = false;
+
+  private Anchor[] teapotAnchors = {null, null, null, null};
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -374,8 +378,6 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
       AugmentedImage augmentedImage = pair.first;
       Anchor centerAnchor = augmentedImageMap.get(augmentedImage.getIndex()).second;
 
-
-
 //      Vector3 point1, point2;
 //      AnchorNode anchorNode = new AnchorNode();
 //      point1 = lastAnchorNode.getWorldPosition();
@@ -384,48 +386,108 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
       //Create 4 anchors for each teapot as well
       switch (augmentedImage.getTrackingState()) {
         case TRACKING:
-          Anchor[] teapotAnchors = {
-                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
-                          -0.3f * augmentedImage.getExtentX(),
-                          0.0f,
-                          -0.3f * augmentedImage.getExtentZ()))),
-                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
-                          -0.1f * augmentedImage.getExtentX(),
-                          0.0f,
-                          -0.3f * augmentedImage.getExtentZ()))),
-                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
-                          0.1f * augmentedImage.getExtentX(),
-                          0.0f,
-                          -0.3f * augmentedImage.getExtentZ()))),
-                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
-                          0.3f * augmentedImage.getExtentX(),
-                          0.0f,
-                          -0.3f * augmentedImage.getExtentZ())))
-          };
+          // Make anchors once
+          if (teapotAnchors[0] == null){
+            teapotAnchors[0] = session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+                    -0.3f * augmentedImage.getExtentX(),
+                    0.0f,
+                    -0.3f * augmentedImage.getExtentZ())));
+            teapotAnchors[1] = session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+                    -0.1f * augmentedImage.getExtentX(),
+                    0.0f,
+                    -0.3f * augmentedImage.getExtentZ())));
+            teapotAnchors[2] = session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+                    0.1f * augmentedImage.getExtentX(),
+                    0.0f,
+                    -0.3f * augmentedImage.getExtentZ())));
+            teapotAnchors[3] = session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+                    0.3f * augmentedImage.getExtentX(),
+                    0.0f,
+                    -0.3f * augmentedImage.getExtentZ())));
+
+        }
+
+
+//          teapotAnchors = {
+//                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+//                          -0.3f * augmentedImage.getExtentX(),
+//                          0.0f,
+//                          -0.3f * augmentedImage.getExtentZ()))),
+//                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+//                          -0.1f * augmentedImage.getExtentX(),
+//                          0.0f,
+//                          -0.3f * augmentedImage.getExtentZ()))),
+//                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+//                          0.1f * augmentedImage.getExtentX(),
+//                          0.0f,
+//                          -0.3f * augmentedImage.getExtentZ()))),
+//                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
+//                          0.3f * augmentedImage.getExtentX(),
+//                          0.0f,
+//                          -0.3f * augmentedImage.getExtentZ())))
+//          };
 
           //Calculte the scale factor
           final float teapot_edge_size = 132113.73f; // Magic number of teapot size
           final float max_image_edge = Math.max(augmentedImage.getExtentX(), augmentedImage.getExtentZ()); // Get largest detected image edge size
 
           float teapotScaleFactor = max_image_edge / (teapot_edge_size * 5);
+//
+//          //DEBUG
+//          float teapot_x = 132113.73f;
+//          float teapot_y = 68599.69f;
+//          float teapot_z = 82209.81f;
+//          float[] test_p =  {teapotAnchors[0].getPose().tx() - (teapot_x/2.0f)*teapotScaleFactor,
+//                teapotAnchors[0].getPose().ty() + (teapot_y/2.0f)*teapotScaleFactor,
+//                teapotAnchors[0].getPose().tz() + (teapot_z/2.0f)*teapotScaleFactor};
+//          augmentedImageRenderer.debug_draw(viewmtx,projmtx,augmentedImage, centerAnchor,colorCorrectionRgba, test_p);
+//          //DEBUG
 
-          //DEBUG
-          float teapot_x = 132113.73f;
-          float teapot_y = 68599.69f;
-          float teapot_z = 82209.81f;
-          float[] test_p =  {teapotAnchors[0].getPose().tx() - (teapot_x/2.0f)*teapotScaleFactor,
-                teapotAnchors[0].getPose().ty() + (teapot_y/2.0f)*teapotScaleFactor,
-                teapotAnchors[0].getPose().tz() + (teapot_z/2.0f)*teapotScaleFactor};
-          augmentedImageRenderer.debug_draw(viewmtx,projmtx,augmentedImage, centerAnchor,colorCorrectionRgba, test_p);
-          //DEBUG
+          if (pickedUpTeapot != -1 && !putDownDisabled && cameraTouchingImage(frame) != null) {
+            Pose hitPose = cameraTouchingImage(frame);
+            //Put down the teapot
+            Log.i("PUT DOWN", "PUTTING DOWN TEAPOT");
+            teapotAnchors[pickedUpTeapot].detach();
+
+            teapotAnchors[pickedUpTeapot] = session.createAnchor(hitPose);
+            //float[] test_p = {hitPose.tx(), hitPose.ty(), hitPose.tz()};
+            //augmentedImageRenderer.debug_draw(viewmtx,projmtx,augmentedImage, centerAnchor,colorCorrectionRgba, test_p);
+            pickedUpTeapot = -1;
+            pickedUpDisabled = true;
+            Log.i("teapot pick up", "pick up is disabled!");
+            //delay so you have time to pick up teapot
+            new java.util.Timer().schedule(
+                    new java.util.TimerTask() {
+                      @Override
+                      public void run() {
+                        pickedUpDisabled = false;
+                        Log.i("teapot pick up", "pick up is enabled!");
+                      }
+                    },
+                    5000
+            );
+          }
+
 
           //Check if camera is hitting one of the teapots
-
           for (int i = 0; i < 4; i++) {
-            if (pickedUpTeapot == -1 && cameraTouchingBoundingSphere(frame, teapotAnchors, i, teapotScaleFactor)) {
+            if (pickedUpTeapot == -1 &&  !pickedUpDisabled && cameraTouchingBoundingSphere(frame, teapotAnchors, i, teapotScaleFactor)) {
               Log.i("HIT", "TOUCH BOUNDING TEAPOT ID " + i);
-              //Remove that teapot's anchor?
+
               pickedUpTeapot = i;
+              putDownDisabled = true;
+              Log.i("teapot put down", "put down is disabled!");
+              //delay so you have time to pick up teapot
+              new java.util.Timer().schedule(
+                      new java.util.TimerTask() {
+                        @Override
+                        public void run() {
+                          putDownDisabled = false;
+                          Log.i("teapot put down", "put down is enabled!");
+                        }
+                      },
+                      5000
+              );
             }
           }
 
@@ -466,6 +528,30 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
       }
     }
     return false;
+  }
+
+  //Return the Pose of the camera touching the augmented image
+  private Pose cameraTouchingImage(Frame frame) {
+    getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+    float y_pos = displaymetrics.heightPixels / 2.0f;
+    float x_pos = displaymetrics.widthPixels / 2.0f;
+
+    for (HitResult hit : frame.hitTest(x_pos, y_pos)) {
+      Trackable trackable = hit.getTrackable();
+      if (trackable instanceof AugmentedImage) {
+        Pose poseHit = hit.getHitPose();
+        Pose cameraPose = frame.getCamera().getPose(); // need to check if camera is decently close
+        float dx = poseHit.tx() - cameraPose.tx();
+        float dy = poseHit.ty() - cameraPose.ty();
+        float dz = poseHit.tz() - cameraPose.tz();
+        float distanceMeters = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        if (distanceMeters <= .15f) {
+          return poseHit;
+        }
+      }
+    }
+    return null;
   }
 
   private boolean cameraTouchingTeapotBoundingBox(Frame frame, Anchor[] teapotAnchors, int teapot_id, float teapotScaleFactor){
