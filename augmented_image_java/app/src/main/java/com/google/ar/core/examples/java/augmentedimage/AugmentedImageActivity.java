@@ -408,6 +408,17 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
           final float max_image_edge = Math.max(augmentedImage.getExtentX(), augmentedImage.getExtentZ()); // Get largest detected image edge size
 
           float teapotScaleFactor = max_image_edge / (teapot_edge_size * 5);
+
+          //DEBUG
+          float teapot_x = 132113.73f;
+          float teapot_y = 68599.69f;
+          float teapot_z = 82209.81f;
+          float[] test_p =  {teapotAnchors[0].getPose().tx() - (teapot_x/2.0f)*teapotScaleFactor,
+                teapotAnchors[0].getPose().ty() + (teapot_y/2.0f)*teapotScaleFactor,
+                teapotAnchors[0].getPose().tz() + (teapot_z/2.0f)*teapotScaleFactor};
+          augmentedImageRenderer.debug_draw(viewmtx,projmtx,augmentedImage, centerAnchor,colorCorrectionRgba, test_p);
+          //DEBUG
+
           //Check if camera is hitting one of the teapots
 
           for (int i = 0; i < 4; i++) {

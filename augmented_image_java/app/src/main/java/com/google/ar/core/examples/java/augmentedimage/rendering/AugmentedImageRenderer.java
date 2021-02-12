@@ -60,6 +60,7 @@ public class AugmentedImageRenderer {
 
 
   private Pose[] teapotPoses = new Pose[4];
+  private float degreeIncTest = 0;
 
   public AugmentedImageRenderer() {}
 
@@ -183,8 +184,17 @@ public class AugmentedImageRenderer {
                 -218310.41f * teapotScaleFactor)).compose(Pose.makeTranslation(0, 0, -0.1f));
       }
 
-      teapotPoses[0].toMatrix(modelMatrix, 0);
-      //Matrix.rotateM(modelMatrix, 0, 90f, 0f, 1f, 0f);
+      //TESTING
+      degreeIncTest += 90;
+      if (degreeIncTest == 360) {
+        degreeIncTest = 0;
+      }
+      modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[0], degreeIncTest, teapotScaleFactor);
+
+
+      //test.toMatrix(modelMatrix, 0);
+      //TESTING
+
       teapot0.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
       teapot0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
@@ -196,9 +206,12 @@ public class AugmentedImageRenderer {
       teapot2.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
       teapot2.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
-      teapotPoses[3].toMatrix(modelMatrix, 0);
-      teapot3.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
-      teapot3.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
+    teapotAnchors[0].getPose().compose(Pose.makeTranslation(
+            2.0f * 262143.57f * teapotScaleFactor,
+            -427295.75f * teapotScaleFactor,
+            2.0f * -218310.41f * teapotScaleFactor)).toMatrix(modelMatrix, 0);
+    teapot3.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
+    teapot3.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
 
 //      frame.getCamera().getPose()
@@ -248,8 +261,7 @@ public class AugmentedImageRenderer {
     andyPose2.toMatrix(modelMatrix, 0);
     debugAndy2.updateModelMatrix(modelMatrix, .1f, .1f, .1f);
     debugAndy2.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
-
-
+    
     Pose andyPose3 = Pose.makeTranslation(
             point3[0],
             point3[1],
@@ -260,6 +272,131 @@ public class AugmentedImageRenderer {
     debugAndy3.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 }
 
+  public float[] calculateAndReturnRotationTeapot(Pose modelPose, float degree, float teapotScaleFactor) {
+    //Because teapot is not centered in origin, figure out how the translation needs to change as a result
+    //Assume teapot got moved so it was centered on the anchor...
+    // My brain is too small to understand
+    float teapot_x = 262143.57f*teapotScaleFactor;
+    float teapot_z = 218310.41f*teapotScaleFactor;
+
+    float[] modelMatrix = new float[16];
+    modelPose.toMatrix(modelMatrix, 0);
+
+    // in our program we only care about rotate on y
+    Matrix.rotateM(modelMatrix, 0, degree, 0f, 1f, 0f);
+
+    float[] trans = getTranslationToCenterCircle(degree, teapot_x, teapot_z);
+
+    // No need to move it back to the center because rotation not at origin
+    Matrix.translateM(modelMatrix, 0,trans[0],0f,trans[1]);
+
+    //Translate it back to where the anchor is
+    //Matrix.translateM(modelMatrix, 0,-teapot_x,0f,-teapot_z);
+
+//    Pose testP = new Pose(modelMatrix, test);
+//    Pose rot = Pose.makeRotation(0f, 1f, 0f, 45f);
+
+    return modelMatrix;
+  }
+
+  public float[] getTranslationToCenterCircle(float degree, float teapot_x, float teapot_z) {
+    float[] returnTrans = new float[2]; //0 is x, 1 is z, since y axis is pointing into the picture
+    if (degree == 0) {
+      returnTrans[0] = teapot_x;
+      returnTrans[1] = -teapot_z;
+
+      //translate back to pose
+      returnTrans[0] += -teapot_x;
+      returnTrans[1] += teapot_z;
+      return returnTrans;
+    } else if (degree == 90) {
+      returnTrans[0] = teapot_x;
+      returnTrans[1] = -teapot_z;
+
+      //translate back to pose
+      returnTrans[0] += -teapot_x;
+      returnTrans[1] += -teapot_z;
+      return returnTrans;
+    } else if (degree == 180) {
+      returnTrans[0] = teapot_x;
+      returnTrans[1] = -teapot_z;
+
+      //translate back to pose
+      returnTrans[0] += teapot_x;
+      returnTrans[1] += -teapot_z;
+      return returnTrans;
+    } else if (degree == 270) {
+      returnTrans[0] = teapot_x;
+      returnTrans[1] = -teapot_z;
+
+      //translate back to pose
+      returnTrans[0] += teapot_x;
+      returnTrans[1] += teapot_z;
+      return returnTrans;
+    }
+
+    returnTrans[0] = 0f;
+    returnTrans[1] = 0f;
+    return returnTrans;
+//    //Not one of the 4 corners
+//    if (0 < degree && degree < 90) {
+//      //Quad 1
+//      double x1 = Math.cos(Math.toRadians(degree)) * teapot_z;
+//      double z1 = Math.sin(Math.toRadians(degree)) * teapot_z;
+//
+//      double x2 = Math.sin(Math.toRadians(degree)) * teapot_x;
+//      double z2 = Math.cos(Math.toRadians(degree)) * teapot_x;
+//
+//      returnTrans[0] = (float)getDiff(x1, x2);
+//      returnTrans[1] = (float)(z1 + z2);
+//    } else if (90 < degree && degree < 180) {
+//      //Quad 2
+//      float deg = degree-90f;
+//      double x1 = Math.sin(Math.toRadians(deg)) * teapot_z;
+//      double z1 = Math.cos(Math.toRadians(deg)) * teapot_z;
+//
+//      double x2 = Math.cos(Math.toRadians(deg)) * teapot_x;
+//      double z2 = Math.sin(Math.toRadians(deg)) * teapot_x;
+//
+//      returnTrans[0] = -1*(float)(x1 + x2);
+//      returnTrans[1] = (float)getDiff(z1, z2);
+//    } else if (180 < degree && degree < 270) {
+//      //Quad 3
+//      float deg = degree-180f;
+//      double x1 = Math.cos(Math.toRadians(deg)) * teapot_z;
+//      double z1 = Math.sin(Math.toRadians(deg)) * teapot_z;
+//
+//      double x2 = Math.sin(Math.toRadians(deg)) * teapot_x;
+//      double z2 = Math.cos(Math.toRadians(deg)) * teapot_x;
+//
+//      returnTrans[0] = -1*(float)getDiff(x1, x2);
+//      returnTrans[1] = -1*(float)(z1 + z2);
+//    } else {
+//      //Quad 4
+//      float deg = degree-270f;
+//      double x1 = Math.cos(Math.toRadians(deg)) * teapot_z;
+//      double z1 = Math.sin(Math.toRadians(deg)) * teapot_z;
+//
+//      double x2 = Math.sin(Math.toRadians(deg)) * teapot_x;
+//      double z2 = Math.cos(Math.toRadians(deg)) * teapot_x;
+//
+//      returnTrans[0] = (float)(x1 + x2);
+//      returnTrans[1] = -1 * (float)getDiff(z1, z2);
+//    }
+//    return returnTrans;
+  }
+
+  public double getDiff(double x, double y) {
+    if (x == y) {
+      return 0;
+    }
+    if (x > y) {
+      return Math.abs(x-y);
+    }
+    else {
+      return Math.abs(y-x);
+    }
+  }
   public void debug_draw(
           float[] viewMatrix,
           float[] projectionMatrix,
