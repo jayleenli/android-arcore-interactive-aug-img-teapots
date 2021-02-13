@@ -155,11 +155,13 @@ public class AugmentedImageRenderer {
       }
       //Check for pickedUp
       if (pickedUpTeapot != -1) {
-        teapotPoses[pickedUpTeapot] = frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.15f).compose(Pose.makeRotation(.66f,0f,0f,.77f)) //up pose
+        teapotPoses[pickedUpTeapot] = frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.15f).compose(Pose.makeRotation(0.7071068f,0f,0f,0.7071068f)) //up pose
+                .compose(Pose.makeRotation(0f,0.7071068f,0f,0.7071068f)) // rotate camera to be same orientation of teapots
                 .compose(Pose.makeTranslation(
                 262143.57f * teapotScaleFactor,
                 -427295.75f * teapotScaleFactor,
                 -218310.41f * teapotScaleFactor)));
+        //teapotDegrees[pickedUpTeapot] = teapotDegrees[pickedUpTeapot]+90; //because camera is rotated.
 
         //Log.i("aug image rotatae", centerAnchor.getPose().extractRotation().toString());
 
@@ -213,6 +215,14 @@ public class AugmentedImageRenderer {
 //      anchorNode = new AnchorNode(anchor);
 //      anchorNode.setRenderable(andyRenderable);
 //      anchorNode.setParent(arFragment.getArSceneView().getScene());
+  }
+
+  public void updateTeapotRotation(int teapotIndex, float degrees) {
+    teapotDegrees[teapotIndex] = degrees;
+  }
+
+  public void changeByOffsetTeapotRotation(int teapotIndex, float offsetDegrees) {
+    teapotDegrees[teapotIndex] += offsetDegrees; //can be neg
   }
 
   public float[] calculateAndReturnRotationTeapot(Pose modelPose, float degree, float teapotScaleFactor) {
@@ -304,17 +314,7 @@ public class AugmentedImageRenderer {
     return returnTrans;
   }
 
-  public double getDiff(double x, double y) {
-    if (x == y) {
-      return 0;
-    }
-    if (x > y) {
-      return Math.abs(x-y);
-    }
-    else {
-      return Math.abs(y-x);
-    }
-  }
+
   public void debug_draw(
           float[] viewMatrix,
           float[] projectionMatrix,

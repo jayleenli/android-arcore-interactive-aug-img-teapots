@@ -30,6 +30,8 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.math.MathUtils;
+
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.RequestManager;
 import com.google.ar.core.Anchor;
@@ -115,7 +117,8 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
   private boolean pickedUpDisabled = false;
 
   private Anchor[] teapotAnchors = {null, null, null, null};
-
+  private float[] cameraPickUpRotation = new float[4];
+  private float[] cameraPutDownRotation = new float[4];
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -443,6 +446,10 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
 //          augmentedImageRenderer.debug_draw(viewmtx,projmtx,augmentedImage, centerAnchor,colorCorrectionRgba, test_p);
 //          //DEBUG
 
+//          float[] test_p = {centerAnchor.getPose().tx(), centerAnchor.getPose().ty(), centerAnchor.getPose().tz()};
+//          augmentedImageRenderer.debug_draw(viewmtx,projmtx,augmentedImage, centerAnchor,colorCorrectionRgba, test_p);
+
+
           if (pickedUpTeapot != -1 && !putDownDisabled && cameraTouchingImage(frame) != null) {
             Pose hitPose = cameraTouchingImage(frame);
             //Put down the teapot
@@ -450,8 +457,26 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
             teapotAnchors[pickedUpTeapot].detach();
 
             teapotAnchors[pickedUpTeapot] = session.createAnchor(hitPose);
-            //float[] test_p = {hitPose.tx(), hitPose.ty(), hitPose.tz()};
-            //augmentedImageRenderer.debug_draw(viewmtx,projmtx,augmentedImage, centerAnchor,colorCorrectionRgba, test_p);
+
+            //calculate difference between the axis of teapot and axis of image?
+            cameraPutDownRotation = frame.getCamera().getPose().getRotationQuaternion();
+
+            //convert back to degrees
+            //Only need z
+            float putDownDeg = getRoll(cameraPutDownRotation);
+            float pickUpDeg = getRoll(cameraPickUpRotation);
+            float degreeOffset = getDiff(pickUpDeg, putDownDeg);
+
+            if (isForward(pickUpDeg, putDownDeg)) {
+              augmentedImageRenderer.changeByOffsetTeapotRotation(pickedUpTeapot, degreeOffset);
+              Log.i("roll test", " IS FORWARD " + degreeOffset);
+
+            } else {
+              augmentedImageRenderer.changeByOffsetTeapotRotation(pickedUpTeapot, -1*degreeOffset);
+              Log.i("roll test", " IS BACKWARD " + degreeOffset);
+            }
+
+//            augmentedImageRenderer.updateTeapotRotation(pickedUpTeapot, 0);
             pickedUpTeapot = -1;
             pickedUpDisabled = true;
             Log.i("teapot pick up", "pick up is disabled!");
@@ -468,13 +493,14 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
             );
           }
 
-
           //Check if camera is hitting one of the teapots
           for (int i = 0; i < 4; i++) {
             if (pickedUpTeapot == -1 &&  !pickedUpDisabled && cameraTouchingBoundingSphere(frame, teapotAnchors, i, teapotScaleFactor)) {
               Log.i("HIT", "TOUCH BOUNDING TEAPOT ID " + i);
 
               pickedUpTeapot = i;
+              cameraPickUpRotation = frame.getCamera().getPose().getRotationQuaternion();
+
               putDownDisabled = true;
               Log.i("teapot put down", "put down is disabled!");
               //delay so you have time to pick up teapot
@@ -500,6 +526,90 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
       }
     }
   }
+
+
+  public boolean isForward(float pickUpDeg, float putDownDeg) {
+    if (pickUpDeg + 180 > 360) {
+      float spillover = (pickUpDeg + 180) % 360;
+      if (spillover > 0 && putDownDeg >= 0 && putDownDeg < spillover) {
+        return true;
+      } else if (spillover >= 0 && pickUpDeg <= putDownDeg  && putDownDeg <= 360) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      // no spillover
+      if (pickUpDeg <= putDownDeg && putDownDeg <= pickUpDeg + 180) {
+        return true; //forward
+      } else {
+        return false;
+      }
+    }
+  }
+
+  /* Following code from libgdx Quaternion library and has changed for this use case. Not importing the entire library since only a few functions are applicable.
+   Source: https://github.com/libgdx/libgdx/blob/master/gdx/src/com/badlogic/gdx/math/Quaternion.java
+   */
+  /** Normalizes this quaternion to unit length
+   * @return the quaternion for chaining */
+  public float[] normalizeQuat(float[] quat) {
+    float x = quat[0];
+    float y = quat[1];
+    float z = quat[2];
+    float w = quat[3];
+    float len = x * x + y * y + z * z + w * w; // length of the quarternion without sqrt
+    if (len != 0.f && !(len == 1f)) {
+      len = (float)Math.sqrt(len);
+      w /= len;
+      x /= len;
+      y /= len;
+      z /= len;
+    }
+    float[] newquat = {x, y, z ,w};
+    return newquat;
+  }
+
+
+  /** Get the pole of the gimbal lock, if any.
+   * @return positive (+1) for north pole, negative (-1) for south pole, zero (0) when no gimbal lock */
+  public int getGimbalPole (float[] quat) {
+    float x = quat[0];
+    float y = quat[1];
+    float z = quat[2];
+    float w = quat[3];
+    final float t = y * x + z * w;
+    return t > 0.499f ? 1 : (t < -0.499f ? -1 : 0);
+  }
+
+  /** Get the roll euler angle in radians, which is the rotation around the z axis. Requires that this quaternion is normalized.
+   * @return the rotation around the z axis in radians (between -PI and +PI) */
+  public float getRollRad (float[] quat) {
+    float x = quat[0];
+    float y = quat[1];
+    float z = quat[2];
+    float w = quat[3];
+    final int pole = getGimbalPole(quat);
+    return (float) (pole == 0 ? Math.atan2((double)(2f * (w * z + y * x)), (double)(1f - 2f * (x * x + z * z))) : (float)pole * 2f
+                * Math.atan2(y, w));
+  }
+
+  /** Get the roll euler angle in degrees, which is the rotation around the z axis. Requires that this quaternion is normalized.
+   * @return the rotation around the z axis in degrees (between 0 and 360) */
+  public float getRoll (float[] quat) {
+    float[] newquat = normalizeQuat(quat);
+    float degreeReturn = (float)Math.toDegrees((double)getRollRad(newquat)); // +180 to return between 0 and 360
+
+//    //-90 to 180
+    if(-90f <= degreeReturn && degreeReturn <= 180f) {
+      return degreeReturn + 90f;
+    }
+    else {
+      //-180 to -90
+      return degreeReturn + 180 + 270;
+    }
+  }
+
 
   private boolean cameraTouchingBoundingSphere(Frame frame, Anchor[] teapotAnchors, int teapot_id, float teapotScaleFactor) {
     float teapot_r = (132113.73f/2.0f)*teapotScaleFactor*1.1f; // increase
@@ -553,6 +663,18 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
     }
     return null;
   }
+  public float getDiff(float x, float y) {
+    if (x == y) {
+      return 0;
+    }
+    if (x > y) {
+      return Math.abs(x-y);
+    }
+    else {
+      return Math.abs(y-x);
+    }
+  }
+
 
   private boolean cameraTouchingTeapotBoundingBox(Frame frame, Anchor[] teapotAnchors, int teapot_id, float teapotScaleFactor){
     // JK FUNCTION IS BROKEN GOING TO SPHERE...
