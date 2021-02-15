@@ -467,14 +467,8 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
             float pickUpDeg = getRoll(cameraPickUpRotation);
             float degreeOffset = getDiff(pickUpDeg, putDownDeg);
 
-            if (isForward(pickUpDeg, putDownDeg)) {
-              augmentedImageRenderer.changeByOffsetTeapotRotation(pickedUpTeapot, degreeOffset);
-              Log.i("roll test", " IS FORWARD " + degreeOffset);
-
-            } else {
-              augmentedImageRenderer.changeByOffsetTeapotRotation(pickedUpTeapot, -1*degreeOffset);
-              Log.i("roll test", " IS BACKWARD " + degreeOffset);
-            }
+            augmentedImageRenderer.changeByOffsetTeapotRotation(pickedUpTeapot, degreeOffset);
+            Log.i("roll test", " CHANGE BY " + degreeOffset);
 
 //            augmentedImageRenderer.updateTeapotRotation(pickedUpTeapot, 0);
             pickedUpTeapot = -1;
@@ -489,7 +483,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
                         Log.i("teapot pick up", "pick up is enabled!");
                       }
                     },
-                    5000
+                    3000
             );
           }
 
@@ -512,7 +506,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
                           Log.i("teapot put down", "put down is enabled!");
                         }
                       },
-                      5000
+                      3000
               );
             }
           }
@@ -663,15 +657,35 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
     }
     return null;
   }
-  public float getDiff(float x, float y) {
-    if (x == y) {
+  public float getDiff(float pickUpDeg, float putDownDeg) {
+    if (pickUpDeg == putDownDeg) {
       return 0;
     }
-    if (x > y) {
-      return Math.abs(x-y);
-    }
-    else {
-      return Math.abs(y-x);
+    //Problem is here
+    if (pickUpDeg + 180 > 360) {
+      float spillover = (pickUpDeg + 180) % 360;
+      if (spillover > 0 && putDownDeg >= 0 && putDownDeg < spillover) {
+        //forward but putdown is in spill over
+        return putDownDeg + 360-pickUpDeg;
+      } else if (spillover >= 0 && pickUpDeg <= putDownDeg && putDownDeg <= 360) {
+        //forward but putdown is not in spill over
+        return putDownDeg - pickUpDeg;
+      } else {
+        //will always spill over but not in forward then it must be backward
+        //if spill over here no way it can cross 0
+        //backward
+        return putDownDeg - pickUpDeg;
+      }
+    } else {
+      // no spillover for forward
+      if (pickUpDeg <= putDownDeg && putDownDeg <= pickUpDeg + 180) {
+        //forward
+        return putDownDeg - pickUpDeg;
+      } else {
+        //backward
+        //Check if spillover for backward
+        return -((360-putDownDeg) + (pickUpDeg));
+      }
     }
   }
 

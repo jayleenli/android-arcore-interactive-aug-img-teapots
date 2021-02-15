@@ -222,7 +222,13 @@ public class AugmentedImageRenderer {
   }
 
   public void changeByOffsetTeapotRotation(int teapotIndex, float offsetDegrees) {
-    teapotDegrees[teapotIndex] += offsetDegrees; //can be neg
+    teapotDegrees[teapotIndex] += offsetDegrees; //can be neg, could be set up to -180 or 360+180
+    if (teapotDegrees[teapotIndex] >= 360) {
+      teapotDegrees[teapotIndex] = teapotDegrees[teapotIndex] % 360;
+    }
+    if(teapotDegrees[teapotIndex] < 0) {
+      teapotDegrees[teapotIndex] = 360 + teapotDegrees[teapotIndex];
+    }
   }
 
   public float[] calculateAndReturnRotationTeapot(Pose modelPose, float degree, float teapotScaleFactor) {
