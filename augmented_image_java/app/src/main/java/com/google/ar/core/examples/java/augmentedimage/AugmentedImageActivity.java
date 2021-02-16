@@ -427,7 +427,6 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
                     0.3f * augmentedImage.getExtentX(),
                     0.0f,
                     -0.3f * augmentedImage.getExtentZ())));
-
         }
 
           //Calculate the scale factor
