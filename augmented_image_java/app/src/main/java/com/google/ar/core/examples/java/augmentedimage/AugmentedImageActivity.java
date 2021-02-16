@@ -26,11 +26,14 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
 import android.view.Display;
+import android.view.MotionEvent;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.math.MathUtils;
+import android.view.GestureDetector;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.RequestManager;
@@ -70,6 +73,7 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import com.google.ar.sceneform.AnchorNode;
+import com.google.ar.sceneform.ArSceneView;
 import com.google.ar.sceneform.Node;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.ModelRenderable;
@@ -119,12 +123,96 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
   private Anchor[] teapotAnchors = {null, null, null, null};
   private float[] cameraPickUpRotation = new float[4];
   private float[] cameraPutDownRotation = new float[4];
+
+  private Frame globalFrameVar;
+  private float globalTeapotScaleFactor;
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
     surfaceView = findViewById(R.id.surfaceview);
     displayRotationHelper = new DisplayRotationHelper(/*context=*/ this);
+
+
+    surfaceView.setOnTouchListener(new View.OnTouchListener() {
+      @Override
+      public boolean onTouch(View v, MotionEvent event) {
+        Log.i("TOUCH", event.getX() + " ,  " + event.getY());
+
+        //If pickup
+        if (pickedUpTeapot == -1) {
+          int teapot_touched = onTapHittingTeapotPickUp(event, globalFrameVar, globalTeapotScaleFactor);
+          if (teapot_touched != -1 && !pickedUpDisabled && !cameraTouchingBoundingSphere(globalFrameVar, teapotAnchors, teapot_touched, globalTeapotScaleFactor)) {
+            pickedUpTeapot = teapot_touched;
+            cameraPickUpRotation = globalFrameVar.getCamera().getPose().getRotationQuaternion();
+
+            putDownDisabled = true;
+            Log.i("teapot put down", "put down is disabled!");
+            //delay so you have time to pick up teapot
+            new java.util.Timer().schedule(
+                    new java.util.TimerTask() {
+                      @Override
+                      public void run() {
+                        putDownDisabled = false;
+                        Log.i("teapot put down", "put down is enabled!");
+                      }
+                    },
+                    3000
+            );
+          }
+          //else do nothing, can't pick up
+        }
+        else {
+          //we are holding a teapot
+          Pose hitPose = onTapHittingAugImagePutDown(event, globalFrameVar);
+          if (pickedUpTeapot != -1 && !putDownDisabled && hitPose != null && cameraTouchingImage(globalFrameVar) == null) {
+            //Put down the teapot
+            Log.i("PUT DOWN", "PUTTING DOWN TEAPOT");
+            teapotAnchors[pickedUpTeapot].detach();
+
+            teapotAnchors[pickedUpTeapot] = session.createAnchor(hitPose);
+
+            //calculate difference between the axis of teapot and axis of image?
+            cameraPutDownRotation = globalFrameVar.getCamera().getPose().getRotationQuaternion();
+
+            //convert back to degrees
+            //Only need z
+            float putDownDeg = getRoll(cameraPutDownRotation);
+            float pickUpDeg = getRoll(cameraPickUpRotation);
+            float degreeOffset = getDiff(pickUpDeg, putDownDeg);
+
+            augmentedImageRenderer.changeByOffsetTeapotRotation(pickedUpTeapot, degreeOffset);
+            Log.i("roll test", " CHANGE BY " + degreeOffset);
+
+//            augmentedImageRenderer.updateTeapotRotation(pickedUpTeapot, 0);
+            pickedUpTeapot = -1;
+            pickedUpDisabled = true;
+            Log.i("teapot pick up", "pick up is disabled!");
+            //delay so you have time to pick up teapot
+            new java.util.Timer().schedule(
+                    new java.util.TimerTask() {
+                      @Override
+                      public void run() {
+                        pickedUpDisabled = false;
+                        Log.i("teapot pick up", "pick up is enabled!");
+                      }
+                    },
+                    3000
+            );
+          }
+
+          //Else can't do anything, we can't put down yet
+        }
+
+
+
+        return true;
+      }
+
+
+    });
+
 
     // Set up renderer.
     surfaceView.setPreserveEGLContextOnPause(true);
@@ -133,7 +221,9 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
     surfaceView.setRenderer(this);
     surfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
     surfaceView.setWillNotDraw(false);
-
+//    JniInterface.assetManager = getAssets();
+//    nativeApplication = JniInterface.createNativeApplication(getAssets());
+//
     fitToScanView = findViewById(R.id.image_view_fit_to_scan);
     glideRequestManager = Glide.with(this);
     glideRequestManager
@@ -297,6 +387,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
       // UpdateMode.BLOCKING (it is by default), this will throttle the rendering to the
       // camera framerate.
       Frame frame = session.update();
+      globalFrameVar = frame;
       Camera camera = frame.getCamera();
 
       // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
@@ -410,31 +501,13 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
 
         }
 
-
-//          teapotAnchors = {
-//                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
-//                          -0.3f * augmentedImage.getExtentX(),
-//                          0.0f,
-//                          -0.3f * augmentedImage.getExtentZ()))),
-//                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
-//                          -0.1f * augmentedImage.getExtentX(),
-//                          0.0f,
-//                          -0.3f * augmentedImage.getExtentZ()))),
-//                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
-//                          0.1f * augmentedImage.getExtentX(),
-//                          0.0f,
-//                          -0.3f * augmentedImage.getExtentZ()))),
-//                  session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
-//                          0.3f * augmentedImage.getExtentX(),
-//                          0.0f,
-//                          -0.3f * augmentedImage.getExtentZ())))
-//          };
-
           //Calculte the scale factor
           final float teapot_edge_size = 132113.73f; // Magic number of teapot size
           final float max_image_edge = Math.max(augmentedImage.getExtentX(), augmentedImage.getExtentZ()); // Get largest detected image edge size
 
           float teapotScaleFactor = max_image_edge / (teapot_edge_size * 5);
+
+          globalTeapotScaleFactor = teapotScaleFactor;
 //
 //          //DEBUG
 //          float teapot_x = 132113.73f;
@@ -521,25 +594,48 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
     }
   }
 
+  private int onTapHittingTeapotPickUp(MotionEvent motionEvent, Frame frame, float teapotScaleFactor) {
+    float x_pos = motionEvent.getX();
+    float y_pos = motionEvent.getY();
+    float teapot_r = (132113.73f/2.0f)*teapotScaleFactor*1.1f; // increase
 
-  public boolean isForward(float pickUpDeg, float putDownDeg) {
-    if (pickUpDeg + 180 > 360) {
-      float spillover = (pickUpDeg + 180) % 360;
-      if (spillover > 0 && putDownDeg >= 0 && putDownDeg < spillover) {
-        return true;
-      } else if (spillover >= 0 && pickUpDeg <= putDownDeg  && putDownDeg <= 360) {
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      // no spillover
-      if (pickUpDeg <= putDownDeg && putDownDeg <= pickUpDeg + 180) {
-        return true; //forward
-      } else {
-        return false;
+    for (HitResult hit : frame.hitTest(x_pos, y_pos)) {
+      Trackable trackable = hit.getTrackable();
+      if (trackable instanceof AugmentedImage) {
+        Pose poseHit = hit.getHitPose();
+
+        //Now check if the poseHit is within bounding sphere of a teapot
+
+        for (int teapot_id = 0; teapot_id < 4; teapot_id++) {
+          float dx = teapotAnchors[teapot_id].getPose().tx() - poseHit.tx();
+          float dy = teapotAnchors[teapot_id].getPose().ty() - poseHit.ty();
+          float dz = teapotAnchors[teapot_id].getPose().tz() - poseHit.tz();
+          float distanceMeters = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+//        Log.i("r ", Float.toString(teapot_r));
+
+          if (distanceMeters <  teapot_r) {
+            Log.i("TOUCH","Distance: " + distanceMeters + " metres" + " " + teapot_id);
+            return teapot_id;
+          }
+        }
+
       }
     }
+    return -1;
+  }
+
+  private Pose onTapHittingAugImagePutDown(MotionEvent motionEvent, Frame frame) {
+    float x_pos = motionEvent.getX();
+    float y_pos = motionEvent.getY();
+
+    for (HitResult hit : frame.hitTest(x_pos, y_pos)) {
+      Trackable trackable = hit.getTrackable();
+      if (trackable instanceof AugmentedImage) {
+        Pose poseHit = hit.getHitPose();
+        return poseHit;
+      }
+    }
+    return null;
   }
 
   /* Following code from libgdx Quaternion library and has changed for this use case. Not importing the entire library since only a few functions are applicable.
