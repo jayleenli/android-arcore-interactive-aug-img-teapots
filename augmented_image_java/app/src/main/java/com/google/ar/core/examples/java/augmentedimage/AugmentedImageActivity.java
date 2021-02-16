@@ -116,6 +116,9 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
 
   private Frame globalFrameVar;
   private float globalTeapotScaleFactor;
+  private Pose globalCenterPose;
+
+  float[][] teapotTranslations = new float[4][3];
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -405,12 +408,13 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
     for (Pair<AugmentedImage, Anchor> pair : augmentedImageMap.values()) {
       AugmentedImage augmentedImage = pair.first;
       Anchor centerAnchor = augmentedImageMap.get(augmentedImage.getIndex()).second;
+      globalCenterPose = centerAnchor.getPose();
 
       //Create 4 anchors for each teapot as well
       switch (augmentedImage.getTrackingState()) {
         case TRACKING:
           // Make anchors once
-          if (teapotAnchors[0] == null){
+          if (teapotAnchors[0] == null) {
             teapotAnchors[0] = session.createAnchor(centerAnchor.getPose().compose(Pose.makeTranslation(
                     -0.3f * augmentedImage.getExtentX(),
                     0.0f,
@@ -427,7 +431,37 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
                     0.3f * augmentedImage.getExtentX(),
                     0.0f,
                     -0.3f * augmentedImage.getExtentZ())));
-        }
+
+            float[] teapot0 = {-0.3f * augmentedImage.getExtentX(), 0.0f, -0.3f* augmentedImage.getExtentZ()};
+            teapotTranslations[0] = teapot0;
+            float[] teapot1 = {-0.1f * augmentedImage.getExtentX(), 0.0f, -0.3f* augmentedImage.getExtentZ()};
+            teapotTranslations[1] = teapot1;
+            float[] teapot2 = {0.1f * augmentedImage.getExtentX(), 0.0f, -0.3f* augmentedImage.getExtentZ()};
+            teapotTranslations[2] = teapot2;
+            float[] teapot3 = {0.3f * augmentedImage.getExtentX(), 0.0f, -0.3f* augmentedImage.getExtentZ()};
+            teapotTranslations[3] = teapot3;
+          }
+          else {
+            //update anchors so they move with image only every 2 seconds
+            //updateAnchors = false;
+            //Using anchors for the andriod because hard to do the translations back to image at this point
+
+            teapotAnchors[0].detach();
+            teapotAnchors[1].detach();
+            teapotAnchors[2].detach();
+            teapotAnchors[3].detach();
+
+            teapotAnchors[0] = session.createAnchor(centerAnchor.getPose().compose(
+                    Pose.makeTranslation(teapotTranslations[0])));
+            teapotAnchors[1] = session.createAnchor(centerAnchor.getPose().compose(
+                    Pose.makeTranslation(teapotTranslations[1])));
+            teapotAnchors[2] = session.createAnchor(centerAnchor.getPose().compose(
+                    Pose.makeTranslation(teapotTranslations[2])));
+            teapotAnchors[3] = session.createAnchor(centerAnchor.getPose().compose(
+                    Pose.makeTranslation(teapotTranslations[3])));
+
+
+          }
 
           //Calculate the scale factor
           final float teapot_edge_size = 132113.73f; // Calculated externally
@@ -456,6 +490,34 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
       }
     }
   }
+
+  //Given a Pose, find out the translation of it with regard to the center pose (AR image)
+  private void updateTranslationfromCenterAnchor(Pose pose, int teapotId) {
+    float poseX = pose.tx();
+    float poseZ = pose.tz();
+
+    float anchorPoseX = globalCenterPose.tx();
+    float anchorPoseZ = globalCenterPose.tz();
+
+    float[] translate = new float[3];
+
+    if(poseX > anchorPoseX) {
+      translate[0] = poseX - anchorPoseX;
+    }
+    else {
+      translate[0] = -(anchorPoseX - poseX);
+    }
+
+    if (poseZ > anchorPoseZ) {
+      translate[2] = poseZ-anchorPoseZ;
+    }
+    else {
+      translate[2] = -(anchorPoseZ - poseZ);
+    }
+
+    teapotTranslations[teapotId] = translate;
+  }
+
 
   private int onTapHittingTeapotPickUp(MotionEvent motionEvent, Frame frame, float teapotScaleFactor) {
     float x_pos = motionEvent.getX();
@@ -521,11 +583,12 @@ private void pickUpTeapot(int teapot_id) {
 
 private void putDownTeapot(Pose hitPose) {
   Log.i("PUT DOWN", "PUTTING DOWN TEAPOT");
-  teapotAnchors[pickedUpTeapot].detach();
+  //teapotAnchors[pickedUpTeapot].detach();
 
-  teapotAnchors[pickedUpTeapot] = session.createAnchor(hitPose);
+  //teapotAnchors[pickedUpTeapot] = session.createAnchor(hitPose);
+  updateTranslationfromCenterAnchor(hitPose, pickedUpTeapot);
 
-  //calculate difference between the axis of teapot and axis of image?
+  //calculate difference between the axis of teapot and axis of image
   cameraPutDownRotation = globalFrameVar.getCamera().getPose().getRotationQuaternion();
 
   //convert back to degrees
