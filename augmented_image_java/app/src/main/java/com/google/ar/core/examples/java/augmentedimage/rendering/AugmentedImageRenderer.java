@@ -22,9 +22,6 @@ import com.google.ar.core.Frame;
 import com.google.ar.core.Pose;
 
 import com.google.ar.core.examples.java.common.rendering.ObjectRenderer;
-import com.google.ar.core.examples.java.common.rendering.ObjectRenderer.BlendMode;
-import com.google.ar.sceneform.math.Quaternion;
-
 import java.io.IOException;
 
 import android.opengl.Matrix;
@@ -54,43 +51,27 @@ public class AugmentedImageRenderer {
   private final ObjectRenderer teapot3 = new ObjectRenderer();
 
   private final ObjectRenderer debugAndy0 = new ObjectRenderer();
-  private final ObjectRenderer debugAndy1 = new ObjectRenderer();
-  private final ObjectRenderer debugAndy2 = new ObjectRenderer();
-  private final ObjectRenderer debugAndy3 = new ObjectRenderer();
-
 
   private Pose[] teapotPoses = new Pose[4];
   private float[] teapotDegrees = {0, 0, 0, 0};
-  private float degreeIncTest = 0;
 
   public AugmentedImageRenderer() {}
 
   public void createOnGlThread(Context context) throws IOException {
-//      teapotObjectRenderer[0] = teapot0;
-//      teapotObjectRenderer[1] = teapot1;
-//      teapotObjectRenderer[2] = teapot2;
-//      teapotObjectRenderer[3] = teapot3;
-//    mazeRenderer.createOnGlThread(
-//            context, "models/Teapot.obj", "models/frame_base.png");
-//    mazeRenderer.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
-
-
-
-
       teapot0.createOnGlThread(
-              context, "models/Teapot.obj", "models/frame_base.png");
+              context, "models/Teapot.obj", "models/teapot_texture.png");
       teapot0.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
       teapot1.createOnGlThread(
-              context, "models/Teapot.obj", "models/frame_base.png");
+              context, "models/Teapot.obj", "models/teapot_texture.png");
       teapot1.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
       teapot2.createOnGlThread(
-              context, "models/Teapot.obj", "models/frame_base.png");
+              context, "models/Teapot.obj", "models/teapot_texture.png");
       teapot2.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
       teapot3.createOnGlThread(
-              context, "models/Teapot.obj", "models/frame_base.png");
+              context, "models/Teapot.obj", "models/teapot_texture.png");
       teapot3.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
       //Debug Andys
@@ -98,123 +79,182 @@ public class AugmentedImageRenderer {
               context, "models/andy.obj", "models/andy.png");
       debugAndy0.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
-      debugAndy1.createOnGlThread(
-                context, "models/andy.obj", "models/andy.png");
-      debugAndy1.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
-
-      debugAndy2.createOnGlThread(
-                context, "models/andy.obj", "models/andy.png");
-      debugAndy2.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
-
-      debugAndy3.createOnGlThread(
-                context, "models/andy.obj", "models/andy.png");
-      debugAndy3.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
-
       //imageFrameUpperLeft.setBlendMode(BlendMode.AlphaBlending);
   }
 
   public void draw(
-      float[] viewMatrix,
-      float[] projectionMatrix,
-      AugmentedImage augmentedImage,
-      Anchor centerAnchor,
-      float[] colorCorrectionRgba,
-      @NonNull Frame frame,
-      Anchor[] teapotAnchors,
-      int pickedUpTeapot) {
-      float[] tintColor =
-          convertHexToColor(TINT_COLORS_HEX[augmentedImage.getIndex() % TINT_COLORS_HEX.length]);
+          float[] viewMatrix,
+          float[] projectionMatrix,
+          AugmentedImage augmentedImage,
+          Anchor centerAnchor,
+          float[] colorCorrectionRgba,
+          @NonNull Frame frame,
+          Anchor[] teapotAnchors,
+          int pickedUpTeapot) {
+    float[] tintColor =
+            convertHexToColor(TINT_COLORS_HEX[augmentedImage.getIndex() % TINT_COLORS_HEX.length]);
 
-      //JAYLEEN: From the tutorial to load in custom obj. Reason for  this is because a lot of models are not centered at origin
+    // OpenGL Matrix operation is in the order: Scale, rotation and Translation
+    // We need to do this adjustment because the teapot obj file
+    // is not centered around origin. Normally when you
+    // work with your own model, you don't have this problem.
 
-//      final float maze_edge_size = 132113.73f; // Magic number of maze size
-//      final float max_image_edge = Math.max(augmentedImage.getExtentX(), augmentedImage.getExtentZ()); // Get largest detected image edge size
-//      Pose anchorPose = centerAnchor.getPose();
-//
-//      float mazsScaleFactor = max_image_edge / maze_edge_size; // scale to set Maze to image size
-//      float[] modelMatrix = new float[16];
-//
-//      // OpenGL Matrix operation is in the order: Scale, rotation and Translation
-//      // We need to do this adjustment because the obj file
-//      // is not centered around origin. Normally when you
-//      // work with your own model, you don't have this problem.
+    final float teapot_edge_size = 132113.73f; // Magic number of teapot size
+    final float max_image_edge = Math.max(augmentedImage.getExtentX(), augmentedImage.getExtentZ()); // Get largest detected image edge size
+    Pose anchorPose = centerAnchor.getPose();
 
-      final float teapot_edge_size = 132113.73f; // Magic number of teapot size
-      final float max_image_edge = Math.max(augmentedImage.getExtentX(), augmentedImage.getExtentZ()); // Get largest detected image edge size
-      Pose anchorPose = centerAnchor.getPose();
+    float teapotScaleFactor = max_image_edge / (teapot_edge_size * 5); // scale to set Maze to image size
+    float[] modelMatrix = new float[16];
 
-      float teapotScaleFactor = max_image_edge / (teapot_edge_size*5); // scale to set Maze to image size
-      float[] modelMatrix = new float[16];
+    for (int i = 0; i < 4; ++i) {
+      Pose teapotPose = teapotAnchors[i].getPose().compose(Pose.makeTranslation(
+              262143.57f * teapotScaleFactor,
+              -427295.75f * teapotScaleFactor,
+              -218310.41f * teapotScaleFactor));
+      teapotPoses[i] = teapotPose;
+    }
+    //Check for pickedUp
+    if (pickedUpTeapot != -1) {
+//        //float[] rotateDirectlyFromAbove = eulerAnglesRadToQuat((float)Math.toRadians((double)teapotDegrees[pickedUpTeapot]),0,0);
+//        float[] quatCam = frame.getCamera().getPose().getRotationQuaternion();
+//        float degreesToRot = getRoll(quatCam);
+//        float[] rotateDirectlyFromAbove = eulerAnglesRadToQuat((float)Math.toRadians(degreesToRot),0,0);
 
-      for (int i = 0; i < 4; ++i) {
-          Pose teapotPose = teapotAnchors[i].getPose().compose(Pose.makeTranslation(
-                  262143.57f * teapotScaleFactor,
+        /* For reference, the center of the rotation is at
+          teapotAnchors[0].getPose().compose(Pose.makeTranslation(
+                  2.0f * 262143.57f * teapotScaleFactor,
                   -427295.75f * teapotScaleFactor,
-                  -218310.41f * teapotScaleFactor));
-          teapotPoses[i] = teapotPose;
-      }
-      //Check for pickedUp
-      if (pickedUpTeapot != -1) {
-        teapotPoses[pickedUpTeapot] = frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.15f).compose(Pose.makeRotation(0.7071068f,0f,0f,0.7071068f)) //up pose
-                .compose(Pose.makeRotation(0f,0.7071068f,0f,0.7071068f)) // rotate camera to be same orientation of teapots
-                .compose(Pose.makeTranslation(
-                262143.57f * teapotScaleFactor,
-                -427295.75f * teapotScaleFactor,
-                -218310.41f * teapotScaleFactor)));
-        //teapotDegrees[pickedUpTeapot] = teapotDegrees[pickedUpTeapot]+90; //because camera is rotated.
+                  2.0f * -218310.41f * teapotScaleFactor)).toMatrix(modelMatrix, 0);
+         */
 
-        //Log.i("aug image rotatae", centerAnchor.getPose().extractRotation().toString());
+      teapotPoses[pickedUpTeapot] = frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.15f).compose(Pose.makeRotation(0.7071068f, 0f, 0f, 0.7071068f)) //up pose 90 around x axis
+              .compose(Pose.makeRotation(0f, 0.7071068f, 0f, 0.7071068f)) // rotate camera to be same orientation of teapots 90 around y axis
+              //.compose(Pose.makeRotation(0f, frame.getCamera().getPose().extractRotation().qy(), 0f, frame.getCamera().getPose().extractRotation().qw()))
+              //.compose(Pose.makeRotation(rotateDirectlyFromAbove))
+              .compose(Pose.makeTranslation(
+                      262143.57f * teapotScaleFactor,
+                      -427295.75f * teapotScaleFactor,
+                      -218310.41f * teapotScaleFactor)));
+      //teapotDegrees[pickedUpTeapot] = teapotDegrees[pickedUpTeapot]+90; //because camera is rotated.
+
+      //Log.i("aug image rotatae", centerAnchor.getPose().extractRotation().toString());
 
 //        Pose andyPose0 = frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.5f).compose(Pose.makeRotation(.66f,0f,0f,.77f)));
 //
 //        andyPose0.toMatrix(modelMatrix, 0);
 //        debugAndy0.updateModelMatrix(modelMatrix, 1f, 1f, 1f);
 //        debugAndy0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
-      }
+    }
 
-      //TESTING
-//      degreeIncTest += 90;
-//      if (degreeIncTest == 360) {
-//        degreeIncTest = 0;
-//      }
-//    degreeIncTest++;
-    //degreeIncTest = 15;
-      modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[0], teapotDegrees[0], teapotScaleFactor);
+    modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[0], teapotDegrees[0], teapotScaleFactor);
+    teapot0.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
+    teapot0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
+    modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[1], teapotDegrees[1], teapotScaleFactor);
+    teapot1.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
+    teapot1.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
-      //test.toMatrix(modelMatrix, 0);
-      //TESTING
-
-      teapot0.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
-      teapot0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
-
-      //teapotPoses[1].toMatrix(modelMatrix, 0);
-      modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[1], teapotDegrees[1], teapotScaleFactor);
-      teapot1.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
-      teapot1.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
-
-      //teapotPoses[2].toMatrix(modelMatrix, 0);
     modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[2], teapotDegrees[2], teapotScaleFactor);
-      teapot2.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
-      teapot2.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
+    teapot2.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
+    teapot2.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
-      //Where the center of the rotation is
-//    teapotAnchors[0].getPose().compose(Pose.makeTranslation(
-//            2.0f * 262143.57f * teapotScaleFactor,
-//            -427295.75f * teapotScaleFactor,
-//            2.0f * -218310.41f * teapotScaleFactor)).toMatrix(modelMatrix, 0);
+
     modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[3], teapotDegrees[3], teapotScaleFactor);
     teapot3.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
     teapot3.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
+  }
 
-//      frame.getCamera().getPose()
-//              .compose(Pose.makeTranslation(0, 0, -1f))
+  /**Code remixed from libgdx Quaternion class
+   * creates a quaternion from the given euler angles in radians.
+   * @param yaw the rotation around the y axis in radians
+   * @param pitch the rotation around the x axis in radians
+   * @param roll the rotation around the z axis in radians
+   * @return a quaternion as a float array*/
+  public float[] eulerAnglesRadToQuat (float yaw, float pitch, float roll) {
+    final float hr = roll * 0.5f;
+    final float shr = (float)Math.sin(hr);
+    final float chr = (float)Math.cos(hr);
+    final float hp = pitch * 0.5f;
+    final float shp = (float)Math.sin(hp);
+    final float chp = (float)Math.cos(hp);
+    final float hy = yaw * 0.5f;
+    final float shy = (float)Math.sin(hy);
+    final float chy = (float)Math.cos(hy);
+    final float chy_shp = chy * shp;
+    final float shy_chp = shy * chp;
+    final float chy_chp = chy * chp;
+    final float shy_shp = shy * shp;
 
-//      Anchor anchor =  session.createAnchor(new Pose(pos, rotation));
-//      anchorNode = new AnchorNode(anchor);
-//      anchorNode.setRenderable(andyRenderable);
-//      anchorNode.setParent(arFragment.getArSceneView().getScene());
+    float x = (chy_shp * chr) + (shy_chp * shr); // cos(yaw/2) * sin(pitch/2) * cos(roll/2) + sin(yaw/2) * cos(pitch/2) * sin(roll/2)
+    float y = (shy_chp * chr) - (chy_shp * shr); // sin(yaw/2) * cos(pitch/2) * cos(roll/2) - cos(yaw/2) * sin(pitch/2) * sin(roll/2)
+    float z = (chy_chp * shr) - (shy_shp * chr); // cos(yaw/2) * cos(pitch/2) * sin(roll/2) - sin(yaw/2) * sin(pitch/2) * cos(roll/2)
+    float w = (chy_chp * chr) + (shy_shp * shr); // cos(yaw/2) * cos(pitch/2) * cos(roll/2) + sin(yaw/2) * sin(pitch/2) * sin(roll/2)
+
+    float[] new_quat = {x, y, z, w};
+    return new_quat;
+  }
+
+    /* Following code from libgdx Quaternion library and has changed for this use case. Not importing the entire library since only a few functions are applicable.
+   Source: https://github.com/libgdx/libgdx/blob/master/gdx/src/com/badlogic/gdx/math/Quaternion.java
+   */
+  /** Normalizes this quaternion to unit length
+   * @return the quaternion for chaining */
+  public float[] normalizeQuat(float[] quat) {
+    float x = quat[0];
+    float y = quat[1];
+    float z = quat[2];
+    float w = quat[3];
+    float len = x * x + y * y + z * z + w * w; // length of the quarternion without sqrt
+    if (len != 0.f && !(len == 1f)) {
+      len = (float)Math.sqrt(len);
+      w /= len;
+      x /= len;
+      y /= len;
+      z /= len;
+    }
+    float[] newquat = {x, y, z ,w};
+    return newquat;
+  }
+
+
+  /** Get the pole of the gimbal lock, if any.
+   * @return positive (+1) for north pole, negative (-1) for south pole, zero (0) when no gimbal lock */
+  public int getGimbalPole (float[] quat) {
+    float x = quat[0];
+    float y = quat[1];
+    float z = quat[2];
+    float w = quat[3];
+    final float t = y * x + z * w;
+    return t > 0.499f ? 1 : (t < -0.499f ? -1 : 0);
+  }
+
+  /** Get the roll euler angle in radians, which is the rotation around the z axis. Requires that this quaternion is normalized.
+   * @return the rotation around the z axis in radians (between -PI and +PI) */
+  public float getRollRad (float[] quat) {
+    float x = quat[0];
+    float y = quat[1];
+    float z = quat[2];
+    float w = quat[3];
+    final int pole = getGimbalPole(quat);
+    return (float) (pole == 0 ? Math.atan2((double)(2f * (w * z + y * x)), (double)(1f - 2f * (x * x + z * z))) : (float)pole * 2f
+            * Math.atan2(y, w));
+  }
+
+  /** Get the roll euler angle in degrees, which is the rotation around the z axis. Requires that this quaternion is normalized.
+   * @return the rotation around the z axis in degrees (between 0 and 360) */
+  public float getRoll (float[] quat) {
+    float[] newquat = normalizeQuat(quat);
+    float degreeReturn = (float)Math.toDegrees((double)getRollRad(newquat)); // +180 to return between 0 and 360
+
+//    //-90 to 180
+    if(-90f <= degreeReturn && degreeReturn <= 180f) {
+      return degreeReturn + 90f;
+    }
+    else {
+      //-180 to -90
+      return degreeReturn + 180 + 270;
+    }
   }
 
   public void updateTeapotRotation(int teapotIndex, float degrees) {
@@ -234,7 +274,6 @@ public class AugmentedImageRenderer {
   public float[] calculateAndReturnRotationTeapot(Pose modelPose, float degree, float teapotScaleFactor) {
     //Because teapot is not centered in origin, figure out how the translation needs to change as a result
     //Assume teapot got moved so it was centered on the anchor...
-    // My brain is too small to understand
     float teapot_x = 262143.57f*teapotScaleFactor;
     float teapot_z = 218310.41f*teapotScaleFactor;
 
@@ -254,43 +293,8 @@ public class AugmentedImageRenderer {
 
   public float[] getTranslationToCenterCircle(float degree, float teapot_x, float teapot_z) {
     float[] returnTrans = new float[2]; //0 is x, 1 is z, since y axis is pointing into the picture
-//    if (degree == 0) {
-//      returnTrans[0] = teapot_x;
-//      returnTrans[1] = -teapot_z;
-//
-//      //translate back to pose
-//      returnTrans[0] += -teapot_x;
-//      returnTrans[1] += teapot_z;
-//      return returnTrans;
-//    } else if (degree == 90) {
-//      returnTrans[0] = teapot_x;
-//      returnTrans[1] = -teapot_z;
-//
-//      //translate back to pose
-//      returnTrans[0] += -teapot_x;
-//      returnTrans[1] += -teapot_z;
-//      return returnTrans;
-//    } else if (degree == 180) {
-//      returnTrans[0] = teapot_x;
-//      returnTrans[1] = -teapot_z;
-//
-//      //translate back to pose
-//      returnTrans[0] += teapot_x;
-//      returnTrans[1] += -teapot_z;
-//      return returnTrans;
-//    } else if (degree == 270) {
-//      returnTrans[0] = teapot_x;
-//      returnTrans[1] = -teapot_z;
-//
-//      //translate back to pose
-//      returnTrans[0] += teapot_x;
-//      returnTrans[1] += teapot_z;
-//      return returnTrans;
-//    }
-
     returnTrans[0] = teapot_x;
     returnTrans[1] = -teapot_z;
-
 
     float radius = (float)Math.sqrt((double)(teapot_x*teapot_x + teapot_z*teapot_z));
     float angle = (float)Math.toDegrees(Math.atan((double)(teapot_z/teapot_x))); //angle of the rectangle of box for teapot
@@ -320,12 +324,10 @@ public class AugmentedImageRenderer {
     return returnTrans;
   }
 
-
   public void debug_draw(
           float[] viewMatrix,
           float[] projectionMatrix,
           AugmentedImage augmentedImage,
-          Anchor targetAnchor,
           float[] colorCorrectionRgba,
           float[] point0) {
     float[] tintColor =
@@ -340,55 +342,6 @@ public class AugmentedImageRenderer {
     andyPose0.toMatrix(modelMatrix, 0);
     debugAndy0.updateModelMatrix(modelMatrix, .25f, .25f, .25f);
     debugAndy0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
-  }
-
-  public void debug_draw(
-          float[] viewMatrix,
-          float[] projectionMatrix,
-          AugmentedImage augmentedImage,
-          Anchor targetAnchor,
-          float[] colorCorrectionRgba,
-          float[] point0, float[] point1, float[] point2, float[] point3) {
-    float[] tintColor =
-            convertHexToColor(TINT_COLORS_HEX[augmentedImage.getIndex() % TINT_COLORS_HEX.length]);
-    float[] modelMatrix = new float[16];
-
-    Pose andyPose0 = Pose.makeTranslation(
-            point0[0],
-            point0[1],
-            point0[2]);
-
-    andyPose0.toMatrix(modelMatrix, 0);
-    debugAndy0.updateModelMatrix(modelMatrix, .1f, .1f, .1f);
-    debugAndy0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
-
-    Pose andyPose1 = Pose.makeTranslation(
-            point1[0],
-            point1[1],
-            point1[2]);
-
-    andyPose1.toMatrix(modelMatrix, 0);
-    debugAndy1.updateModelMatrix(modelMatrix, .1f, .1f, .1f);
-    debugAndy1.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
-
-
-    Pose andyPose2 = Pose.makeTranslation(
-            point2[0],
-            point2[1],
-            point2[2]);
-
-    andyPose2.toMatrix(modelMatrix, 0);
-    debugAndy2.updateModelMatrix(modelMatrix, .1f, .1f, .1f);
-    debugAndy2.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
-
-    Pose andyPose3 = Pose.makeTranslation(
-            point3[0],
-            point3[1],
-            point3[2]);
-
-    andyPose3.toMatrix(modelMatrix, 0);
-    debugAndy3.updateModelMatrix(modelMatrix, .1f, .1f, .1f);
-    debugAndy3.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
   }
 
   private static float[] convertHexToColor(int colorHex) {
