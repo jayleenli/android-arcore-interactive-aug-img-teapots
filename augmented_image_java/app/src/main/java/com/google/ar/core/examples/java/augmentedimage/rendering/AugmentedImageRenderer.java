@@ -16,12 +16,14 @@
 package com.google.ar.core.examples.java.augmentedimage.rendering;
 
 import android.content.Context;
+
 import com.google.ar.core.Anchor;
 import com.google.ar.core.AugmentedImage;
 import com.google.ar.core.Frame;
 import com.google.ar.core.Pose;
 
 import com.google.ar.core.examples.java.common.rendering.ObjectRenderer;
+
 import java.io.IOException;
 
 import android.opengl.Matrix;
@@ -29,15 +31,17 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-/** Renders an augmented image. */
+/**
+ * Renders an augmented image.
+ */
 public class AugmentedImageRenderer {
   private static final String TAG = "AugmentedImageRenderer";
 
   private static final float TINT_INTENSITY = 0.1f;
   private static final float TINT_ALPHA = 1.0f;
   private static final int[] TINT_COLORS_HEX = {
-    0x000000, 0xF44336, 0xE91E63, 0x9C27B0, 0x673AB7, 0x3F51B5, 0x2196F3, 0x03A9F4, 0x00BCD4,
-    0x009688, 0x4CAF50, 0x8BC34A, 0xCDDC39, 0xFFEB3B, 0xFFC107, 0xFF9800,
+          0x000000, 0xF44336, 0xE91E63, 0x9C27B0, 0x673AB7, 0x3F51B5, 0x2196F3, 0x03A9F4, 0x00BCD4,
+          0x009688, 0x4CAF50, 0x8BC34A, 0xCDDC39, 0xFFEB3B, 0xFFC107, 0xFF9800,
   };
 
   /*
@@ -57,29 +61,30 @@ public class AugmentedImageRenderer {
 
   private float[] cameraRotateForPickUp = {0f, 0.7071068f, 0f, 0.7071068f};
 
-  public AugmentedImageRenderer() {}
+  public AugmentedImageRenderer() {
+  }
 
   public void createOnGlThread(Context context) throws IOException {
-      teapot0.createOnGlThread(
-              context, "models/Teapot.obj", "models/teapot_texture.png");
-      teapot0.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
+    teapot0.createOnGlThread(
+            context, "models/Teapot.obj", "models/teapot_texture.png");
+    teapot0.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
-      teapot1.createOnGlThread(
-              context, "models/Teapot.obj", "models/teapot_texture.png");
-      teapot1.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
+    teapot1.createOnGlThread(
+            context, "models/Teapot.obj", "models/teapot_texture.png");
+    teapot1.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
-      teapot2.createOnGlThread(
-              context, "models/Teapot.obj", "models/teapot_texture.png");
-      teapot2.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
+    teapot2.createOnGlThread(
+            context, "models/Teapot.obj", "models/teapot_texture.png");
+    teapot2.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
-      teapot3.createOnGlThread(
-              context, "models/Teapot.obj", "models/teapot_texture.png");
-      teapot3.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
+    teapot3.createOnGlThread(
+            context, "models/Teapot.obj", "models/teapot_texture.png");
+    teapot3.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
-      //Debug Andy
-      debugAndy0.createOnGlThread(
-              context, "models/andy.obj", "models/andy.png");
-      debugAndy0.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
+    //Debug Andy
+    debugAndy0.createOnGlThread(
+            context, "models/andy.obj", "models/andy.png");
+    debugAndy0.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
   }
 
   public void draw(
@@ -164,26 +169,27 @@ public class AugmentedImageRenderer {
     if (teapotDegrees[teapotIndex] >= 360) {
       teapotDegrees[teapotIndex] = teapotDegrees[teapotIndex] % 360;
     }
-    if(teapotDegrees[teapotIndex] < 0) {
+    if (teapotDegrees[teapotIndex] < 0) {
       teapotDegrees[teapotIndex] = 360 + teapotDegrees[teapotIndex];
     }
   }
-/*
- * augmented image axis was
- *            -z
- *             |
- *             |
- *  -x------------------+x
- *             |
- *             |
- *            +z
- *
- */
+
+  /*
+   * augmented image axis was
+   *            -z
+   *             |
+   *             |
+   *  -x------------------+x
+   *             |
+   *             |
+   *            +z
+   *
+   */
   public float[] calculateAndReturnRotationTeapot(Pose modelPose, float degree, float teapotScaleFactor) {
     //Because teapot is not centered in origin, figure out how the translation needs to change as a result
     //Assume teapot got moved so it was centered on the anchor...
-    float teapot_x = 262143.57f*teapotScaleFactor;
-    float teapot_z = 218310.41f*teapotScaleFactor;
+    float teapot_x = 262143.57f * teapotScaleFactor;
+    float teapot_z = 218310.41f * teapotScaleFactor;
 
     float[] modelMatrix = new float[16];
     modelPose.toMatrix(modelMatrix, 0);
@@ -194,14 +200,14 @@ public class AugmentedImageRenderer {
     float[] trans = getTranslationToCenterCircle(degree, teapot_x, teapot_z);
 
     // Now need to move it back to the center because rotation not at origin
-    Matrix.translateM(modelMatrix, 0,trans[0],0f,trans[1]);
+    Matrix.translateM(modelMatrix, 0, trans[0], 0f, trans[1]);
 
     return modelMatrix;
   }
 
   /*Because the teapot was not centered at origin, do some math... to translate it back....
-  * note to self: try to never use a model that is not centered at origin ever again...
-    *  Coordinate System looks like this Note: DEGREES
+   * note to self: try to never use a model that is not centered at origin ever again...
+   *  Coordinate System looks like this Note: DEGREES
    *            270
    *       Q4    |   Q3
    *             |
@@ -246,36 +252,35 @@ public class AugmentedImageRenderer {
    *
    * purpose was to move rotated teapot back to the center of where its rotation is (but not move it back to teapot anchor).
    * So had to calculate the triangles to move it back to the center
-  */
+   */
   public float[] getTranslationToCenterCircle(float degree, float teapot_x, float teapot_z) {
     float[] returnTrans = new float[2]; //0 is x, 1 is z, since y axis is pointing into the picture
     //*note1 This moves the teapot back to center point of rotation (0,0)
     returnTrans[0] = teapot_x;
     returnTrans[1] = -teapot_z;
 
-    float radius = (float)Math.sqrt((double)(teapot_x*teapot_x + teapot_z*teapot_z));
-    float angle = (float)Math.toDegrees(Math.atan((double)(teapot_z/teapot_x))); //angle of the rectangle of box for teapot
+    float radius = (float) Math.sqrt((double) (teapot_x * teapot_x + teapot_z * teapot_z));
+    float angle = (float) Math.toDegrees(Math.atan((double) (teapot_z / teapot_x))); //angle of the rectangle of box for teapot
 
     //*note2 Now need to figure out how to move the teapot back to where the anchor is. based on the size of teapot
     if (0 <= degree && degree < 90) {
       //Quad 1
-      returnTrans[0] += -Math.cos(Math.toRadians(angle-degree)) * radius;
-      returnTrans[1] += Math.sin(Math.toRadians(angle-degree)) * radius;
+      returnTrans[0] += -Math.cos(Math.toRadians(angle - degree)) * radius;
+      returnTrans[1] += Math.sin(Math.toRadians(angle - degree)) * radius;
     } else if (90 <= degree && degree < 180) {
       //Quad 2
-      float deg = degree-90f;
-      returnTrans[0] += -Math.sin(Math.toRadians(angle-deg)) * radius;
-      returnTrans[1] += -Math.cos(Math.toRadians(angle-deg)) * radius;
-    }
-    else if (180 <= degree && degree < 270) {
+      float deg = degree - 90f;
+      returnTrans[0] += -Math.sin(Math.toRadians(angle - deg)) * radius;
+      returnTrans[1] += -Math.cos(Math.toRadians(angle - deg)) * radius;
+    } else if (180 <= degree && degree < 270) {
       //Quad 3
-      float deg = degree-180f;
-      returnTrans[0] += Math.cos(Math.toRadians(angle-deg)) * radius;
-      returnTrans[1] += -Math.sin(Math.toRadians(angle-deg)) * radius;
+      float deg = degree - 180f;
+      returnTrans[0] += Math.cos(Math.toRadians(angle - deg)) * radius;
+      returnTrans[1] += -Math.sin(Math.toRadians(angle - deg)) * radius;
     } else {
-      float deg = degree-270f;
-      returnTrans[0] += Math.sin(Math.toRadians(angle-deg)) * radius;
-      returnTrans[1] += Math.cos(Math.toRadians(angle-deg)) * radius;
+      float deg = degree - 270f;
+      returnTrans[0] += Math.sin(Math.toRadians(angle - deg)) * radius;
+      returnTrans[1] += Math.cos(Math.toRadians(angle - deg)) * radius;
     }
     return returnTrans;
   }
@@ -305,6 +310,6 @@ public class AugmentedImageRenderer {
     float red = ((colorHex & 0xFF0000) >> 16) / 255.0f * TINT_INTENSITY;
     float green = ((colorHex & 0x00FF00) >> 8) / 255.0f * TINT_INTENSITY;
     float blue = (colorHex & 0x0000FF) / 255.0f * TINT_INTENSITY;
-    return new float[] {red, green, blue, TINT_ALPHA};
+    return new float[]{red, green, blue, TINT_ALPHA};
   }
 }

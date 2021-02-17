@@ -31,6 +31,7 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
@@ -59,11 +60,13 @@ import com.google.ar.core.exceptions.UnavailableApkTooOldException;
 import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException;
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -141,8 +144,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
             pickUpTeapot(teapot_touched);
           }
           //else do nothing, can't pick up
-        }
-        else {
+        } else {
           //we are holding a teapot
           Pose hitPose = onTapHittingAugImagePutDown(event, globalFrameVar);
           if (pickedUpTeapot != -1 && !putDownDisabled && hitPose != null && cameraTouchingImage(globalFrameVar) == null) {
@@ -166,8 +168,8 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
     fitToScanView = findViewById(R.id.image_view_fit_to_scan);
     glideRequestManager = Glide.with(this);
     glideRequestManager
-        .load(Uri.parse("file:///android_asset/fit_to_scan.png"))
-        .into(fitToScanView);
+            .load(Uri.parse("file:///android_asset/fit_to_scan.png"))
+            .into(fitToScanView);
 
     installRequested = false;
   }
@@ -211,7 +213,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
 
         session = new Session(/* context = */ this);
       } catch (UnavailableArcoreNotInstalledException
-          | UnavailableUserDeclinedInstallationException e) {
+              | UnavailableUserDeclinedInstallationException e) {
         message = "Please install ARCore";
         exception = e;
       } catch (UnavailableApkTooOldException e) {
@@ -272,7 +274,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
     if (!CameraPermissionHelper.hasCameraPermission(this)) {
       Toast.makeText(
               this, "Camera permissions are needed to run this application", Toast.LENGTH_LONG)
-          .show();
+              .show();
       if (!CameraPermissionHelper.shouldShowRequestPermissionRationale(this)) {
         // Permission denied with checking "Do not ask again".
         CameraPermissionHelper.launchPermissionSettings(this);
@@ -365,9 +367,9 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
   }
 
   private void drawAugmentedImages(
-      Frame frame, float[] projmtx, float[] viewmtx, float[] colorCorrectionRgba) {
+          Frame frame, float[] projmtx, float[] viewmtx, float[] colorCorrectionRgba) {
     Collection<AugmentedImage> updatedAugmentedImages =
-        frame.getUpdatedTrackables(AugmentedImage.class);
+            frame.getUpdatedTrackables(AugmentedImage.class);
 
     // Iterate to update augmentedImageMap, remove elements we cannot draw.
     for (AugmentedImage augmentedImage : updatedAugmentedImages) {
@@ -382,18 +384,18 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
         case TRACKING:
           // Have to switch to UI Thread to update View.
           this.runOnUiThread(
-              new Runnable() {
-                @Override
-                public void run() {
-                  fitToScanView.setVisibility(View.GONE);
-                }
-              });
+                  new Runnable() {
+                    @Override
+                    public void run() {
+                      fitToScanView.setVisibility(View.GONE);
+                    }
+                  });
 
           // Create a new anchor for newly found images.
           if (!augmentedImageMap.containsKey(augmentedImage.getIndex())) {
             Anchor centerPoseAnchor = augmentedImage.createAnchor(augmentedImage.getCenterPose());
             augmentedImageMap.put(
-                augmentedImage.getIndex(), Pair.create(augmentedImage, centerPoseAnchor));
+                    augmentedImage.getIndex(), Pair.create(augmentedImage, centerPoseAnchor));
           }
           break;
 
@@ -434,16 +436,15 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
                     0.0f,
                     -0.3f * augmentedImage.getExtentZ())));
 
-            float[] teapot0 = {-0.3f * augmentedImage.getExtentX(), 0.0f, -0.3f* augmentedImage.getExtentZ()};
+            float[] teapot0 = {-0.3f * augmentedImage.getExtentX(), 0.0f, -0.3f * augmentedImage.getExtentZ()};
             teapotTranslations[0] = teapot0;
-            float[] teapot1 = {-0.1f * augmentedImage.getExtentX(), 0.0f, -0.3f* augmentedImage.getExtentZ()};
+            float[] teapot1 = {-0.1f * augmentedImage.getExtentX(), 0.0f, -0.3f * augmentedImage.getExtentZ()};
             teapotTranslations[1] = teapot1;
-            float[] teapot2 = {0.1f * augmentedImage.getExtentX(), 0.0f, -0.3f* augmentedImage.getExtentZ()};
+            float[] teapot2 = {0.1f * augmentedImage.getExtentX(), 0.0f, -0.3f * augmentedImage.getExtentZ()};
             teapotTranslations[2] = teapot2;
-            float[] teapot3 = {0.3f * augmentedImage.getExtentX(), 0.0f, -0.3f* augmentedImage.getExtentZ()};
+            float[] teapot3 = {0.3f * augmentedImage.getExtentX(), 0.0f, -0.3f * augmentedImage.getExtentZ()};
             teapotTranslations[3] = teapot3;
-          }
-          else {
+          } else {
             //Using anchors for the android because hard to do the translations back to image using only one anchor
             teapotAnchors[0].detach();
             teapotAnchors[1].detach();
@@ -489,15 +490,15 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
   }
 
   /*Given a Pose, find out the translation of it with regard to the center pose (AR image)
-  *  Coordinate System looks like this with respect to image
-  *            -z
-  *             |
-  *             |
-  *  -x------------------+x
-  *             |
-  *             |
-  *            +z
-  */
+   *  Coordinate System looks like this with respect to image
+   *            -z
+   *             |
+   *             |
+   *  -x------------------+x
+   *             |
+   *             |
+   *            +z
+   */
   private void updateTranslationfromCenterAnchor(Pose pose, int teapotId) {
     float poseX = pose.tx();
     float poseZ = pose.tz();
@@ -507,17 +508,15 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
 
     float[] translate = new float[3];
 
-    if(poseX > anchorPoseX) {
+    if (poseX > anchorPoseX) {
       translate[0] = poseX - anchorPoseX;
-    }
-    else {
+    } else {
       translate[0] = -(anchorPoseX - poseX);
     }
 
     if (poseZ > anchorPoseZ) {
-      translate[2] = poseZ-anchorPoseZ;
-    }
-    else {
+      translate[2] = poseZ - anchorPoseZ;
+    } else {
       translate[2] = -(anchorPoseZ - poseZ);
     }
 
@@ -528,7 +527,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
   private int onTapHittingTeapotPickUp(MotionEvent motionEvent, Frame frame, float teapotScaleFactor) {
     float x_pos = motionEvent.getX();
     float y_pos = motionEvent.getY();
-    float teapot_r = (132113.73f/2.0f)*teapotScaleFactor*1.1f; // increase
+    float teapot_r = (132113.73f / 2.0f) * teapotScaleFactor * 1.1f; // increase
 
     for (HitResult hit : frame.hitTest(x_pos, y_pos)) {
       Trackable trackable = hit.getTrackable();
@@ -542,7 +541,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
           float dz = teapotAnchors[teapot_id].getPose().tz() - poseHit.tz();
           float distanceMeters = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-          if (distanceMeters <  teapot_r) {
+          if (distanceMeters < teapot_r) {
             Log.i("TOUCH", "hit " + teapot_id);
             return teapot_id;
           }
@@ -567,73 +566,73 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
     return null;
   }
 
-private void pickUpTeapot(int teapot_id) {
-  Log.i("HIT", "TOUCH BOUNDING TEAPOT ID " + teapot_id);
+  private void pickUpTeapot(int teapot_id) {
+    Log.i("HIT", "TOUCH BOUNDING TEAPOT ID " + teapot_id);
 
-  pickedUpTeapot = teapot_id;
-  cameraPickUpRotation = globalFrameVar.getCamera().getPose().getRotationQuaternion();
-  setCameraRotateForPickUp(cameraPickUpRotation);
+    pickedUpTeapot = teapot_id;
+    cameraPickUpRotation = globalFrameVar.getCamera().getPose().getRotationQuaternion();
+    setCameraRotateForPickUp(cameraPickUpRotation);
 
-  putDownDisabled = true;
-  Log.i("teapot put down", "put down is disabled!");
-  //delay so you have time to pick up teapot
-  new java.util.Timer().schedule(
-          new java.util.TimerTask() {
-            @Override
-            public void run() {
-              putDownDisabled = false;
-              Log.i("teapot put down", "put down is enabled!");
-            }
-          },
-          3000
-  );
-}
+    putDownDisabled = true;
+    Log.i("teapot put down", "put down is disabled!");
+    //delay so you have time to pick up teapot
+    new java.util.Timer().schedule(
+            new java.util.TimerTask() {
+              @Override
+              public void run() {
+                putDownDisabled = false;
+                Log.i("teapot put down", "put down is enabled!");
+              }
+            },
+            3000
+    );
+  }
 
-private void putDownTeapot(Pose hitPose) {
-  Log.i("PUT DOWN", "PUTTING DOWN TEAPOT");
+  private void putDownTeapot(Pose hitPose) {
+    Log.i("PUT DOWN", "PUTTING DOWN TEAPOT");
 
-  updateTranslationfromCenterAnchor(hitPose, pickedUpTeapot);
+    updateTranslationfromCenterAnchor(hitPose, pickedUpTeapot);
 
-  //calculate difference between the axis of teapot and axis of image
-  cameraPutDownRotation = globalFrameVar.getCamera().getPose().getRotationQuaternion();
+    //calculate difference between the axis of teapot and axis of image
+    cameraPutDownRotation = globalFrameVar.getCamera().getPose().getRotationQuaternion();
 
-  //convert back to degrees
-  //Only need z
-  float putDownDeg = getRoll(cameraPutDownRotation);
-  float pickUpDeg = getRoll(cameraPickUpRotation);
-  float degreeOffset = getDiff(pickUpDeg, putDownDeg);
+    //convert back to degrees
+    //Only need z
+    float putDownDeg = getRoll(cameraPutDownRotation);
+    float pickUpDeg = getRoll(cameraPickUpRotation);
+    float degreeOffset = getDiff(pickUpDeg, putDownDeg);
 
-  augmentedImageRenderer.changeByOffsetTeapotRotation(pickedUpTeapot, degreeOffset);
-  Log.i("roll", " CHANGE BY " + degreeOffset);
+    augmentedImageRenderer.changeByOffsetTeapotRotation(pickedUpTeapot, degreeOffset);
+    Log.i("roll", " CHANGE BY " + degreeOffset);
 
-  pickedUpTeapot = -1;
-  pickedUpDisabled = true;
-  Log.i("teapot pick up", "pick up is disabled!");
-  //delay so you have time to pick up teapot
-  new java.util.Timer().schedule(
-          new java.util.TimerTask() {
-            @Override
-            public void run() {
-              pickedUpDisabled = false;
-              Log.i("teapot pick up", "pick up is enabled!");
-            }
-          },
-          3000
-  );
-}
+    pickedUpTeapot = -1;
+    pickedUpDisabled = true;
+    Log.i("teapot pick up", "pick up is disabled!");
+    //delay so you have time to pick up teapot
+    new java.util.Timer().schedule(
+            new java.util.TimerTask() {
+              @Override
+              public void run() {
+                pickedUpDisabled = false;
+                Log.i("teapot pick up", "pick up is enabled!");
+              }
+            },
+            3000
+    );
+  }
 
-//For rotating the camera so it is on same plane as it is on augmented image
-public void setCameraRotateForPickUp(float[] quat) {
+  //For rotating the camera so it is on same plane as it is on augmented image
+  public void setCameraRotateForPickUp(float[] quat) {
     float[] newquat = normalizeQuat(quat);
     float rollRad = getRollRad(newquat);
     //Need to convert radians to convert to rotation that camera is using
     //pass to augmented image renderer and convert back into quaternion
-    augmentedImageRenderer.updateCameraRotateForPickUp(eulerAnglesRadToQuat(-rollRad,0,0));
+    augmentedImageRenderer.updateCameraRotateForPickUp(eulerAnglesRadToQuat(-rollRad, 0, 0));
   }
 
   //camera to image teapot pickup check
   private int cameraTouchingBoundingSphere(Frame frame, Anchor[] teapotAnchors, float teapotScaleFactor) {
-    float teapot_r = (132113.73f/2.0f)*teapotScaleFactor*1.1f; // increase
+    float teapot_r = (132113.73f / 2.0f) * teapotScaleFactor * 1.1f; // increase
     getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
     float y_pos = displaymetrics.heightPixels / 2.0f;
     float x_pos = displaymetrics.widthPixels / 2.0f;
@@ -710,7 +709,7 @@ public void setCameraRotateForPickUp(float[] quat) {
       float spillover = (pickUpDeg + 180) % 360;
       if (spillover > 0 && putDownDeg >= 0 && putDownDeg < spillover) {
         //forward but putdown is in spill over
-        return putDownDeg + 360-pickUpDeg;
+        return putDownDeg + 360 - pickUpDeg;
       } else if (spillover >= 0 && pickUpDeg <= putDownDeg && putDownDeg <= 360) {
         //forward but putdown is not in spill over
         return putDownDeg - pickUpDeg;
@@ -728,7 +727,7 @@ public void setCameraRotateForPickUp(float[] quat) {
       } else {
         //backward
         //Check if spillover for backward
-        return -((360-putDownDeg) + (pickUpDeg));
+        return -((360 - putDownDeg) + (pickUpDeg));
       }
     }
   }
@@ -737,8 +736,11 @@ public void setCameraRotateForPickUp(float[] quat) {
    Source: https://github.com/libgdx/libgdx/blob/master/gdx/src/com/badlogic/gdx/math/Quaternion.java
    */
 
-  /** Normalizes this quaternion to unit length
-   * @return the quaternion for chaining */
+  /**
+   * Normalizes this quaternion to unit length
+   *
+   * @return the quaternion for chaining
+   */
   public float[] normalizeQuat(float[] quat) {
     float x = quat[0];
     float y = quat[1];
@@ -746,20 +748,23 @@ public void setCameraRotateForPickUp(float[] quat) {
     float w = quat[3];
     float len = x * x + y * y + z * z + w * w; // length of the quarternion without sqrt
     if (len != 0.f && !(len == 1f)) {
-      len = (float)Math.sqrt(len);
+      len = (float) Math.sqrt(len);
       w /= len;
       x /= len;
       y /= len;
       z /= len;
     }
-    float[] newquat = {x, y, z ,w};
+    float[] newquat = {x, y, z, w};
     return newquat;
   }
 
 
-  /** Get the pole of the gimbal lock, if any.
-   * @return positive (+1) for north pole, negative (-1) for south pole, zero (0) when no gimbal lock */
-  public int getGimbalPole (float[] quat) {
+  /**
+   * Get the pole of the gimbal lock, if any.
+   *
+   * @return positive (+1) for north pole, negative (-1) for south pole, zero (0) when no gimbal lock
+   */
+  public int getGimbalPole(float[] quat) {
     float x = quat[0];
     float y = quat[1];
     float z = quat[2];
@@ -768,49 +773,57 @@ public void setCameraRotateForPickUp(float[] quat) {
     return t > 0.499f ? 1 : (t < -0.499f ? -1 : 0);
   }
 
-  /** Get the roll euler angle in radians, which is the rotation around the z axis. Requires that this quaternion is normalized.
-   * @return the rotation around the z axis in radians (between -PI and +PI) */
-  public float getRollRad (float[] quat) {
+  /**
+   * Get the roll euler angle in radians, which is the rotation around the z axis. Requires that this quaternion is normalized.
+   *
+   * @return the rotation around the z axis in radians (between -PI and +PI)
+   */
+  public float getRollRad(float[] quat) {
     float x = quat[0];
     float y = quat[1];
     float z = quat[2];
     float w = quat[3];
     final int pole = getGimbalPole(quat);
-    return (float) (pole == 0 ? Math.atan2((double)(2f * (w * z + y * x)), (double)(1f - 2f * (x * x + z * z))) : (float)pole * 2f
-                * Math.atan2(y, w));
+    return (float) (pole == 0 ? Math.atan2((double) (2f * (w * z + y * x)), (double) (1f - 2f * (x * x + z * z))) : (float) pole * 2f
+            * Math.atan2(y, w));
   }
 
-  /** Get the roll euler angle in degrees, which is the rotation around the z axis. Requires that this quaternion is normalized.
-   * @return the rotation around the z axis in degrees (between 0 and 360) */
-  public float getRoll (float[] quat) {
+  /**
+   * Get the roll euler angle in degrees, which is the rotation around the z axis. Requires that this quaternion is normalized.
+   *
+   * @return the rotation around the z axis in degrees (between 0 and 360)
+   */
+  public float getRoll(float[] quat) {
     float[] newquat = normalizeQuat(quat);
-    float degreeReturn = (float)Math.toDegrees((double)getRollRad(newquat)); // +180 to return between 0 and 360
+    float degreeReturn = (float) Math.toDegrees((double) getRollRad(newquat)); // +180 to return between 0 and 360
 
     //-90 to 180
-    if(-90f <= degreeReturn && degreeReturn <= 180f) {
+    if (-90f <= degreeReturn && degreeReturn <= 180f) {
       return degreeReturn + 90f;
-    }
-    else {
+    } else {
       //-180 to -90
       return degreeReturn + 180 + 270;
     }
   }
 
-  /**creates a quaternion from the given euler angles in radians.
-   * @param yaw the rotation around the y axis in radians
+  /**
+   * creates a quaternion from the given euler angles in radians.
+   *
+   * @param yaw   the rotation around the y axis in radians
    * @param pitch the rotation around the x axis in radians
-   * @param roll the rotation around the z axis in radians
-   * @return a quaternion as a float array*/
-  public float[] eulerAnglesRadToQuat (float yaw, float pitch, float roll) {
+   * @param roll  the rotation around the z axis in radians
+   * @return a quaternion as a float array
+   */
+  public float[] eulerAnglesRadToQuat(float yaw, float pitch, float roll) {
     final float hr = roll * 0.5f;
-    final float shr = (float)Math.sin(hr);
-    final float chr = (float)Math.cos(hr);
+    final float shr = (float) Math.sin(hr);
+    final float chr = (float) Math.cos(hr);
     final float hp = pitch * 0.5f;
-    final float shp = (float)Math.sin(hp);
-    final float chp = (float)Math.cos(hp);
+    final float shp = (float) Math.sin(hp);
+    final float chp = (float) Math.cos(hp);
     final float hy = yaw * 0.5f;
-    final float shy = (float)Math.sin(hy);
-    final float chy = (float)Math.cos(hy);
+    final float shy = (float) Math.sin(hy);
+    final float chy = (float) Math.cos(hy);
     final float chy_shp = chy * shp;
     final float shy_chp = shy * chp;
     final float chy_chp = chy * chp;
