@@ -76,12 +76,10 @@ public class AugmentedImageRenderer {
               context, "models/Teapot.obj", "models/teapot_texture.png");
       teapot3.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
-      //Debug Andys
+      //Debug Andy
       debugAndy0.createOnGlThread(
               context, "models/andy.obj", "models/andy.png");
       debugAndy0.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
-
-      //imageFrameUpperLeft.setBlendMode(BlendMode.AlphaBlending);
   }
 
   public void draw(
@@ -114,10 +112,11 @@ public class AugmentedImageRenderer {
               -218310.41f * teapotScaleFactor));
       teapotPoses[i] = teapotPose;
     }
+
     //Check for pickedUp
     if (pickedUpTeapot != -1) {
       teapotPoses[pickedUpTeapot] = frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.15f).compose(Pose.makeRotation(0.7071068f, 0f, 0f, 0.7071068f)) //up pose 90 around x axis
-              .compose(Pose.makeRotation(cameraRotateForPickUp))
+              .compose(Pose.makeRotation(cameraRotateForPickUp)) // to align with the way teapot is with respect to image.
               .compose(Pose.makeTranslation(
                       262143.57f * teapotScaleFactor,
                       -427295.75f * teapotScaleFactor,
@@ -136,7 +135,6 @@ public class AugmentedImageRenderer {
     teapot2.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
     teapot2.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
 
-
     modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[3], teapotDegrees[3], teapotScaleFactor);
     teapot3.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
     teapot3.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
@@ -146,10 +144,21 @@ public class AugmentedImageRenderer {
     teapotDegrees[teapotIndex] = degrees;
   }
 
+  //To change the rotation of teapot when picked up to be same direction as when it was picked up
   public void updateCameraRotateForPickUp(float[] newRotation) {
     cameraRotateForPickUp = newRotation;
   }
 
+  /*Change the rotation of teapot using the same degree rotation system
+   *  Coordinate System looks like this Note: DEGREES
+   *            270
+   *             |
+   *             |
+   *  0------------------180
+   *             |
+   *             |
+   *            90
+   */
   public void changeByOffsetTeapotRotation(int teapotIndex, float offsetDegrees) {
     teapotDegrees[teapotIndex] += offsetDegrees; //can be neg, could be set up to -180 or 360+180
     if (teapotDegrees[teapotIndex] >= 360) {
@@ -159,7 +168,17 @@ public class AugmentedImageRenderer {
       teapotDegrees[teapotIndex] = 360 + teapotDegrees[teapotIndex];
     }
   }
-
+/*
+ * augmented image axis was
+ *            -z
+ *             |
+ *             |
+ *  -x------------------+x
+ *             |
+ *             |
+ *            +z
+ *
+ */
   public float[] calculateAndReturnRotationTeapot(Pose modelPose, float degree, float teapotScaleFactor) {
     //Because teapot is not centered in origin, figure out how the translation needs to change as a result
     //Assume teapot got moved so it was centered on the anchor...
@@ -174,22 +193,70 @@ public class AugmentedImageRenderer {
 
     float[] trans = getTranslationToCenterCircle(degree, teapot_x, teapot_z);
 
-    // No need to move it back to the center because rotation not at origin
+    // Now need to move it back to the center because rotation not at origin
     Matrix.translateM(modelMatrix, 0,trans[0],0f,trans[1]);
 
     return modelMatrix;
   }
 
+  /*Because the teapot was not centered at origin, do some math... to translate it back....
+  * note to self: try to never use a model that is not centered at origin ever again...
+    *  Coordinate System looks like this Note: DEGREES
+   *            270
+   *       Q4    |   Q3
+   *             |
+   *  0------------------180
+   *       Q1    |    Q2
+   *             |
+   *            90
+   *
+   * *note1
+   *  Because teapot not at origin, rotation would not seem to be at center.
+   * So need to move it +x and -z to make it seem like it would be at center since rotating also changed the axis of the teapot, as it was relative to the teapot.
+   * Because the obj file looked something like this(once teapot was on augmented image)
+   *             -z
+   *             |
+   *             |
+   *  -x-------------------+x
+   *       T     |
+   *             |
+   *            +z
+   * After rotation and following code, Teapot is now at
+   *    returnTrans[0] = teapot_x;
+   *    returnTrans[1] = -teapot_z;
+   *
+   *            -z
+   *             |
+   *             |
+   *  -x---------T---------+x
+   *             |
+   *             |
+   *            +z
+   *
+   *
+   *  *note2, then needed to translate it back to the anchor positions, which was using this kind of coordinate axis
+   * teapot axis was I think. where A is the anchor that could be located now anywhere after rotation but on same direction. So had to find the angle the axis rotated and translate T to wherever A is.
+   *            -z
+   *             |
+   *             |
+   *  -x---------T---------+x
+   *             |
+   *     A       |
+   *            +z
+   *
+   * purpose was to move rotated teapot back to the center of where its rotation is (but not move it back to teapot anchor).
+   * So had to calculate the triangles to move it back to the center
+  */
   public float[] getTranslationToCenterCircle(float degree, float teapot_x, float teapot_z) {
     float[] returnTrans = new float[2]; //0 is x, 1 is z, since y axis is pointing into the picture
+    //*note1 This moves the teapot back to center point of rotation (0,0)
     returnTrans[0] = teapot_x;
     returnTrans[1] = -teapot_z;
 
     float radius = (float)Math.sqrt((double)(teapot_x*teapot_x + teapot_z*teapot_z));
     float angle = (float)Math.toDegrees(Math.atan((double)(teapot_z/teapot_x))); //angle of the rectangle of box for teapot
 
-    //Now need to figure out how to move the teapot back to where the anchor is. I think this is based on the size of teapot
-    //Not one of the 4 corners
+    //*note2 Now need to figure out how to move the teapot back to where the anchor is. based on the size of teapot
     if (0 <= degree && degree < 90) {
       //Quad 1
       returnTrans[0] += -Math.cos(Math.toRadians(angle-degree)) * radius;

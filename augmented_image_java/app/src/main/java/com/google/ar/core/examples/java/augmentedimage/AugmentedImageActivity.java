@@ -128,6 +128,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
     surfaceView = findViewById(R.id.surfaceview);
     displayRotationHelper = new DisplayRotationHelper(/*context=*/ this);
 
+    //Listener for taps
     surfaceView.setOnTouchListener(new View.OnTouchListener() {
       @Override
       public boolean onTouch(View v, MotionEvent event) {
@@ -443,8 +444,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
             teapotTranslations[3] = teapot3;
           }
           else {
-            //Using anchors for the android because hard to do the translations back to image at this point
-
+            //Using anchors for the android because hard to do the translations back to image using only one anchor
             teapotAnchors[0].detach();
             teapotAnchors[1].detach();
             teapotAnchors[2].detach();
@@ -488,7 +488,16 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
     }
   }
 
-  //Given a Pose, find out the translation of it with regard to the center pose (AR image)
+  /*Given a Pose, find out the translation of it with regard to the center pose (AR image)
+  *  Coordinate System looks like this with respect to image
+  *            -z
+  *             |
+  *             |
+  *  -x------------------+x
+  *             |
+  *             |
+  *            +z
+  */
   private void updateTranslationfromCenterAnchor(Pose pose, int teapotId) {
     float poseX = pose.tx();
     float poseZ = pose.tz();
@@ -515,7 +524,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
     teapotTranslations[teapotId] = translate;
   }
 
-
+  //Touch screen teapot pickup check
   private int onTapHittingTeapotPickUp(MotionEvent motionEvent, Frame frame, float teapotScaleFactor) {
     float x_pos = motionEvent.getX();
     float y_pos = motionEvent.getY();
@@ -534,7 +543,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
           float distanceMeters = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
 
           if (distanceMeters <  teapot_r) {
-            Log.i("TOUCH","Distance: " + distanceMeters + " metres" + " " + teapot_id);
+            Log.i("TOUCH", "hit " + teapot_id);
             return teapot_id;
           }
         }
@@ -543,6 +552,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
     return -1;
   }
 
+  //Touch screen teapot putdown check
   private Pose onTapHittingAugImagePutDown(MotionEvent motionEvent, Frame frame) {
     float x_pos = motionEvent.getX();
     float y_pos = motionEvent.getY();
@@ -581,9 +591,7 @@ private void pickUpTeapot(int teapot_id) {
 
 private void putDownTeapot(Pose hitPose) {
   Log.i("PUT DOWN", "PUTTING DOWN TEAPOT");
-  //teapotAnchors[pickedUpTeapot].detach();
 
-  //teapotAnchors[pickedUpTeapot] = session.createAnchor(hitPose);
   updateTranslationfromCenterAnchor(hitPose, pickedUpTeapot);
 
   //calculate difference between the axis of teapot and axis of image
@@ -613,9 +621,122 @@ private void putDownTeapot(Pose hitPose) {
           3000
   );
 }
+
+//For rotating the camera so it is on same plane as it is on augmented image
+public void setCameraRotateForPickUp(float[] quat) {
+    float[] newquat = normalizeQuat(quat);
+    float rollRad = getRollRad(newquat);
+    //Need to convert radians to convert to rotation that camera is using
+    //pass to augmented image renderer and convert back into quaternion
+    augmentedImageRenderer.updateCameraRotateForPickUp(eulerAnglesRadToQuat(-rollRad,0,0));
+  }
+
+  //camera to image teapot pickup check
+  private int cameraTouchingBoundingSphere(Frame frame, Anchor[] teapotAnchors, float teapotScaleFactor) {
+    float teapot_r = (132113.73f/2.0f)*teapotScaleFactor*1.1f; // increase
+    getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+    float y_pos = displaymetrics.heightPixels / 2.0f;
+    float x_pos = displaymetrics.widthPixels / 2.0f;
+
+    //Check if camera is hitting one of the teapots
+    for (int teapot_id = 0; teapot_id < 4; teapot_id++) {
+      for (HitResult hit : frame.hitTest(x_pos, y_pos)) {
+        Trackable trackable = hit.getTrackable();
+        if (trackable instanceof AugmentedImage) {
+          Pose poseHit = hit.getHitPose();
+          Pose cameraPose = frame.getCamera().getPose(); // need to check if camera is decently close
+          float cdx = teapotAnchors[teapot_id].getPose().tx() - cameraPose.tx();
+          float cdy = teapotAnchors[teapot_id].getPose().ty() - cameraPose.ty();
+          float cdz = teapotAnchors[teapot_id].getPose().tz() - cameraPose.tz();
+          float cdistanceMeters = (float) Math.sqrt(cdx * cdx + cdy * cdy + cdz * cdz);
+
+          float dx = teapotAnchors[teapot_id].getPose().tx() - poseHit.tx();
+          float dy = teapotAnchors[teapot_id].getPose().ty() - poseHit.ty();
+          float dz = teapotAnchors[teapot_id].getPose().tz() - poseHit.tz();
+          float distanceMeters = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+          if (distanceMeters < teapot_r && cdistanceMeters <= .15f) {
+            return teapot_id;
+          }
+        }
+      }
+    }
+    return -1;
+  }
+
+  //camera to image teapot putdown pose return
+  private Pose cameraTouchingImage(Frame frame) {
+    getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+    float y_pos = displaymetrics.heightPixels / 2.0f;
+    float x_pos = displaymetrics.widthPixels / 2.0f;
+
+    for (HitResult hit : frame.hitTest(x_pos, y_pos)) {
+      Trackable trackable = hit.getTrackable();
+      if (trackable instanceof AugmentedImage) {
+        Pose poseHit = hit.getHitPose();
+        Pose cameraPose = frame.getCamera().getPose(); // need to check if camera is decently close
+        float dx = poseHit.tx() - cameraPose.tx();
+        float dy = poseHit.ty() - cameraPose.ty();
+        float dz = poseHit.tz() - cameraPose.tz();
+        float distanceMeters = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        if (distanceMeters <= .15f) {
+          return poseHit;
+        }
+      }
+    }
+    return null;
+  }
+
+
+  /* Gets the difference in angle based on this kind of rotation system(equal to opengl rotation, which is in degrees)
+   * This is the reason for the multiple cases, so that the conversion can be kept to a 0-360 degree format with this kind of system
+   *  Coordinate System looks like this Note: DEGREES
+   *            270
+   *             |
+   *             |
+   *  0------------------180
+   *             |
+   *             |
+   *            90
+   */
+
+  public float getDiff(float pickUpDeg, float putDownDeg) {
+    if (pickUpDeg == putDownDeg) {
+      return 0;
+    }
+
+    if (pickUpDeg + 180 > 360) {
+      float spillover = (pickUpDeg + 180) % 360;
+      if (spillover > 0 && putDownDeg >= 0 && putDownDeg < spillover) {
+        //forward but putdown is in spill over
+        return putDownDeg + 360-pickUpDeg;
+      } else if (spillover >= 0 && pickUpDeg <= putDownDeg && putDownDeg <= 360) {
+        //forward but putdown is not in spill over
+        return putDownDeg - pickUpDeg;
+      } else {
+        //will always spill over but not in forward then it must be backward
+        //if spill over here no way it can cross 0
+        //backward
+        return putDownDeg - pickUpDeg;
+      }
+    } else {
+      // no spillover for forward
+      if (pickUpDeg <= putDownDeg && putDownDeg <= pickUpDeg + 180) {
+        //forward
+        return putDownDeg - pickUpDeg;
+      } else {
+        //backward
+        //Check if spillover for backward
+        return -((360-putDownDeg) + (pickUpDeg));
+      }
+    }
+  }
+
   /* Following code from libgdx Quaternion library and has changed for this use case. Not importing the entire library since only a few functions are applicable.
    Source: https://github.com/libgdx/libgdx/blob/master/gdx/src/com/badlogic/gdx/math/Quaternion.java
    */
+
   /** Normalizes this quaternion to unit length
    * @return the quaternion for chaining */
   public float[] normalizeQuat(float[] quat) {
@@ -665,7 +786,7 @@ private void putDownTeapot(Pose hitPose) {
     float[] newquat = normalizeQuat(quat);
     float degreeReturn = (float)Math.toDegrees((double)getRollRad(newquat)); // +180 to return between 0 and 360
 
-//    //-90 to 180
+    //-90 to 180
     if(-90f <= degreeReturn && degreeReturn <= 180f) {
       return degreeReturn + 90f;
     }
@@ -675,16 +796,7 @@ private void putDownTeapot(Pose hitPose) {
     }
   }
 
-  public void setCameraRotateForPickUp(float[] quat) {
-    float[] newquat = normalizeQuat(quat);
-    float rollRad = getRollRad(newquat);
-    //Need to convert radians to convert to rotation that camera is using
-    //pass to augmented image renderer and convert back into quaternion
-    augmentedImageRenderer.updateCameraRotateForPickUp(eulerAnglesRadToQuat(-rollRad,0,0));
-  }
-
-  /**Code remixed from libgdx Quaternion class
-   * creates a quaternion from the given euler angles in radians.
+  /**creates a quaternion from the given euler angles in radians.
    * @param yaw the rotation around the y axis in radians
    * @param pitch the rotation around the x axis in radians
    * @param roll the rotation around the z axis in radians
@@ -712,94 +824,6 @@ private void putDownTeapot(Pose hitPose) {
     float[] new_quat = {x, y, z, w};
     return new_quat;
   }
-
-  private int cameraTouchingBoundingSphere(Frame frame, Anchor[] teapotAnchors, float teapotScaleFactor) {
-    float teapot_r = (132113.73f/2.0f)*teapotScaleFactor*1.1f; // increase
-    getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
-    float y_pos = displaymetrics.heightPixels / 2.0f;
-    float x_pos = displaymetrics.widthPixels / 2.0f;
-
-    //Check if camera is hitting one of the teapots
-    for (int teapot_id = 0; teapot_id < 4; teapot_id++) {
-      for (HitResult hit : frame.hitTest(x_pos, y_pos)) {
-        Trackable trackable = hit.getTrackable();
-        if (trackable instanceof AugmentedImage) {
-          Pose poseHit = hit.getHitPose();
-          Pose cameraPose = frame.getCamera().getPose(); // need to check if camera is decently close
-          float cdx = teapotAnchors[teapot_id].getPose().tx() - cameraPose.tx();
-          float cdy = teapotAnchors[teapot_id].getPose().ty() - cameraPose.ty();
-          float cdz = teapotAnchors[teapot_id].getPose().tz() - cameraPose.tz();
-          float cdistanceMeters = (float) Math.sqrt(cdx * cdx + cdy * cdy + cdz * cdz);
-
-          float dx = teapotAnchors[teapot_id].getPose().tx() - poseHit.tx();
-          float dy = teapotAnchors[teapot_id].getPose().ty() - poseHit.ty();
-          float dz = teapotAnchors[teapot_id].getPose().tz() - poseHit.tz();
-          float distanceMeters = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-          if (distanceMeters < teapot_r && cdistanceMeters <= .15f) {
-            return teapot_id;
-          }
-        }
-      }
-    }
-    return -1;
-  }
-
-  //Return the Pose of the camera touching the augmented image
-  private Pose cameraTouchingImage(Frame frame) {
-    getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
-    float y_pos = displaymetrics.heightPixels / 2.0f;
-    float x_pos = displaymetrics.widthPixels / 2.0f;
-
-    for (HitResult hit : frame.hitTest(x_pos, y_pos)) {
-      Trackable trackable = hit.getTrackable();
-      if (trackable instanceof AugmentedImage) {
-        Pose poseHit = hit.getHitPose();
-        Pose cameraPose = frame.getCamera().getPose(); // need to check if camera is decently close
-        float dx = poseHit.tx() - cameraPose.tx();
-        float dy = poseHit.ty() - cameraPose.ty();
-        float dz = poseHit.tz() - cameraPose.tz();
-        float distanceMeters = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-        if (distanceMeters <= .15f) {
-          return poseHit;
-        }
-      }
-    }
-    return null;
-  }
-  public float getDiff(float pickUpDeg, float putDownDeg) {
-    if (pickUpDeg == putDownDeg) {
-      return 0;
-    }
-
-    if (pickUpDeg + 180 > 360) {
-      float spillover = (pickUpDeg + 180) % 360;
-      if (spillover > 0 && putDownDeg >= 0 && putDownDeg < spillover) {
-        //forward but putdown is in spill over
-        return putDownDeg + 360-pickUpDeg;
-      } else if (spillover >= 0 && pickUpDeg <= putDownDeg && putDownDeg <= 360) {
-        //forward but putdown is not in spill over
-        return putDownDeg - pickUpDeg;
-      } else {
-        //will always spill over but not in forward then it must be backward
-        //if spill over here no way it can cross 0
-        //backward
-        return putDownDeg - pickUpDeg;
-      }
-    } else {
-      // no spillover for forward
-      if (pickUpDeg <= putDownDeg && putDownDeg <= pickUpDeg + 180) {
-        //forward
-        return putDownDeg - pickUpDeg;
-      } else {
-        //backward
-        //Check if spillover for backward
-        return -((360-putDownDeg) + (pickUpDeg));
-      }
-    }
-  }
-
 
   private boolean setupAugmentedImageDatabase(Config config) {
     AugmentedImageDatabase augmentedImageDatabase;
