@@ -117,6 +117,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
   private Frame globalFrameVar;
   private float globalTeapotScaleFactor;
   private Pose globalCenterPose;
+  private float[] cameraRotateForPickUp;
 
   float[][] teapotTranslations = new float[4][3];
 
@@ -442,9 +443,7 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
             teapotTranslations[3] = teapot3;
           }
           else {
-            //update anchors so they move with image only every 2 seconds
-            //updateAnchors = false;
-            //Using anchors for the andriod because hard to do the translations back to image at this point
+            //Using anchors for the android because hard to do the translations back to image at this point
 
             teapotAnchors[0].detach();
             teapotAnchors[1].detach();
@@ -459,8 +458,6 @@ public class AugmentedImageActivity extends AppCompatActivity implements GLSurfa
                     Pose.makeTranslation(teapotTranslations[2])));
             teapotAnchors[3] = session.createAnchor(centerAnchor.getPose().compose(
                     Pose.makeTranslation(teapotTranslations[3])));
-
-
           }
 
           //Calculate the scale factor
@@ -565,6 +562,7 @@ private void pickUpTeapot(int teapot_id) {
 
   pickedUpTeapot = teapot_id;
   cameraPickUpRotation = globalFrameVar.getCamera().getPose().getRotationQuaternion();
+  setCameraRotateForPickUp(cameraPickUpRotation);
 
   putDownDisabled = true;
   Log.i("teapot put down", "put down is disabled!");
@@ -675,6 +673,44 @@ private void putDownTeapot(Pose hitPose) {
       //-180 to -90
       return degreeReturn + 180 + 270;
     }
+  }
+
+  public void setCameraRotateForPickUp(float[] quat) {
+    float[] newquat = normalizeQuat(quat);
+    float rollRad = getRollRad(newquat);
+    //Need to convert radians to convert to rotation that camera is using
+    //pass to augmented image renderer and convert back into quaternion
+    augmentedImageRenderer.updateCameraRotateForPickUp(eulerAnglesRadToQuat(-rollRad,0,0));
+  }
+
+  /**Code remixed from libgdx Quaternion class
+   * creates a quaternion from the given euler angles in radians.
+   * @param yaw the rotation around the y axis in radians
+   * @param pitch the rotation around the x axis in radians
+   * @param roll the rotation around the z axis in radians
+   * @return a quaternion as a float array*/
+  public float[] eulerAnglesRadToQuat (float yaw, float pitch, float roll) {
+    final float hr = roll * 0.5f;
+    final float shr = (float)Math.sin(hr);
+    final float chr = (float)Math.cos(hr);
+    final float hp = pitch * 0.5f;
+    final float shp = (float)Math.sin(hp);
+    final float chp = (float)Math.cos(hp);
+    final float hy = yaw * 0.5f;
+    final float shy = (float)Math.sin(hy);
+    final float chy = (float)Math.cos(hy);
+    final float chy_shp = chy * shp;
+    final float shy_chp = shy * chp;
+    final float chy_chp = chy * chp;
+    final float shy_shp = shy * shp;
+
+    float x = (chy_shp * chr) + (shy_chp * shr); // cos(yaw/2) * sin(pitch/2) * cos(roll/2) + sin(yaw/2) * cos(pitch/2) * sin(roll/2)
+    float y = (shy_chp * chr) - (chy_shp * shr); // sin(yaw/2) * cos(pitch/2) * cos(roll/2) - cos(yaw/2) * sin(pitch/2) * sin(roll/2)
+    float z = (chy_chp * shr) - (shy_shp * chr); // cos(yaw/2) * cos(pitch/2) * sin(roll/2) - sin(yaw/2) * sin(pitch/2) * cos(roll/2)
+    float w = (chy_chp * chr) + (shy_shp * shr); // cos(yaw/2) * cos(pitch/2) * cos(roll/2) + sin(yaw/2) * sin(pitch/2) * sin(roll/2)
+
+    float[] new_quat = {x, y, z, w};
+    return new_quat;
   }
 
   private int cameraTouchingBoundingSphere(Frame frame, Anchor[] teapotAnchors, float teapotScaleFactor) {

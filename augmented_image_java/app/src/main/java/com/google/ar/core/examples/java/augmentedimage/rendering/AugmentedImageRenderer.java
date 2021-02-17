@@ -55,6 +55,8 @@ public class AugmentedImageRenderer {
   private Pose[] teapotPoses = new Pose[4];
   private float[] teapotDegrees = {0, 0, 0, 0};
 
+  private float[] cameraRotateForPickUp = {0f, 0.7071068f, 0f, 0.7071068f};
+
   public AugmentedImageRenderer() {}
 
   public void createOnGlThread(Context context) throws IOException {
@@ -101,10 +103,9 @@ public class AugmentedImageRenderer {
 
     final float teapot_edge_size = 132113.73f; // Magic number of teapot size
     final float max_image_edge = Math.max(augmentedImage.getExtentX(), augmentedImage.getExtentZ()); // Get largest detected image edge size
-    Pose anchorPose = centerAnchor.getPose();
 
     float teapotScaleFactor = max_image_edge / (teapot_edge_size * 5); // scale to set Maze to image size
-    float[] modelMatrix = new float[16];
+    float[] modelMatrix;
 
     for (int i = 0; i < 4; ++i) {
       Pose teapotPose = teapotAnchors[i].getPose().compose(Pose.makeTranslation(
@@ -115,35 +116,12 @@ public class AugmentedImageRenderer {
     }
     //Check for pickedUp
     if (pickedUpTeapot != -1) {
-//        //float[] rotateDirectlyFromAbove = eulerAnglesRadToQuat((float)Math.toRadians((double)teapotDegrees[pickedUpTeapot]),0,0);
-//        float[] quatCam = frame.getCamera().getPose().getRotationQuaternion();
-//        float degreesToRot = getRoll(quatCam);
-//        float[] rotateDirectlyFromAbove = eulerAnglesRadToQuat((float)Math.toRadians(degreesToRot),0,0);
-
-        /* For reference, the center of the rotation is at
-          teapotAnchors[0].getPose().compose(Pose.makeTranslation(
-                  2.0f * 262143.57f * teapotScaleFactor,
-                  -427295.75f * teapotScaleFactor,
-                  2.0f * -218310.41f * teapotScaleFactor)).toMatrix(modelMatrix, 0);
-         */
-
       teapotPoses[pickedUpTeapot] = frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.15f).compose(Pose.makeRotation(0.7071068f, 0f, 0f, 0.7071068f)) //up pose 90 around x axis
-              .compose(Pose.makeRotation(0f, 0.7071068f, 0f, 0.7071068f)) // rotate camera to be same orientation of teapots 90 around y axis
-              //.compose(Pose.makeRotation(0f, frame.getCamera().getPose().extractRotation().qy(), 0f, frame.getCamera().getPose().extractRotation().qw()))
-              //.compose(Pose.makeRotation(rotateDirectlyFromAbove))
+              .compose(Pose.makeRotation(cameraRotateForPickUp))
               .compose(Pose.makeTranslation(
                       262143.57f * teapotScaleFactor,
                       -427295.75f * teapotScaleFactor,
                       -218310.41f * teapotScaleFactor)));
-      //teapotDegrees[pickedUpTeapot] = teapotDegrees[pickedUpTeapot]+90; //because camera is rotated.
-
-      //Log.i("aug image rotatae", centerAnchor.getPose().extractRotation().toString());
-
-//        Pose andyPose0 = frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.5f).compose(Pose.makeRotation(.66f,0f,0f,.77f)));
-//
-//        andyPose0.toMatrix(modelMatrix, 0);
-//        debugAndy0.updateModelMatrix(modelMatrix, 1f, 1f, 1f);
-//        debugAndy0.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
     }
 
     modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[0], teapotDegrees[0], teapotScaleFactor);
@@ -162,103 +140,14 @@ public class AugmentedImageRenderer {
     modelMatrix = calculateAndReturnRotationTeapot(teapotPoses[3], teapotDegrees[3], teapotScaleFactor);
     teapot3.updateModelMatrix(modelMatrix, teapotScaleFactor, teapotScaleFactor, teapotScaleFactor);
     teapot3.draw(viewMatrix, projectionMatrix, colorCorrectionRgba, tintColor);
-
-  }
-
-  /**Code remixed from libgdx Quaternion class
-   * creates a quaternion from the given euler angles in radians.
-   * @param yaw the rotation around the y axis in radians
-   * @param pitch the rotation around the x axis in radians
-   * @param roll the rotation around the z axis in radians
-   * @return a quaternion as a float array*/
-  public float[] eulerAnglesRadToQuat (float yaw, float pitch, float roll) {
-    final float hr = roll * 0.5f;
-    final float shr = (float)Math.sin(hr);
-    final float chr = (float)Math.cos(hr);
-    final float hp = pitch * 0.5f;
-    final float shp = (float)Math.sin(hp);
-    final float chp = (float)Math.cos(hp);
-    final float hy = yaw * 0.5f;
-    final float shy = (float)Math.sin(hy);
-    final float chy = (float)Math.cos(hy);
-    final float chy_shp = chy * shp;
-    final float shy_chp = shy * chp;
-    final float chy_chp = chy * chp;
-    final float shy_shp = shy * shp;
-
-    float x = (chy_shp * chr) + (shy_chp * shr); // cos(yaw/2) * sin(pitch/2) * cos(roll/2) + sin(yaw/2) * cos(pitch/2) * sin(roll/2)
-    float y = (shy_chp * chr) - (chy_shp * shr); // sin(yaw/2) * cos(pitch/2) * cos(roll/2) - cos(yaw/2) * sin(pitch/2) * sin(roll/2)
-    float z = (chy_chp * shr) - (shy_shp * chr); // cos(yaw/2) * cos(pitch/2) * sin(roll/2) - sin(yaw/2) * sin(pitch/2) * cos(roll/2)
-    float w = (chy_chp * chr) + (shy_shp * shr); // cos(yaw/2) * cos(pitch/2) * cos(roll/2) + sin(yaw/2) * sin(pitch/2) * sin(roll/2)
-
-    float[] new_quat = {x, y, z, w};
-    return new_quat;
-  }
-
-    /* Following code from libgdx Quaternion library and has changed for this use case. Not importing the entire library since only a few functions are applicable.
-   Source: https://github.com/libgdx/libgdx/blob/master/gdx/src/com/badlogic/gdx/math/Quaternion.java
-   */
-  /** Normalizes this quaternion to unit length
-   * @return the quaternion for chaining */
-  public float[] normalizeQuat(float[] quat) {
-    float x = quat[0];
-    float y = quat[1];
-    float z = quat[2];
-    float w = quat[3];
-    float len = x * x + y * y + z * z + w * w; // length of the quarternion without sqrt
-    if (len != 0.f && !(len == 1f)) {
-      len = (float)Math.sqrt(len);
-      w /= len;
-      x /= len;
-      y /= len;
-      z /= len;
-    }
-    float[] newquat = {x, y, z ,w};
-    return newquat;
-  }
-
-
-  /** Get the pole of the gimbal lock, if any.
-   * @return positive (+1) for north pole, negative (-1) for south pole, zero (0) when no gimbal lock */
-  public int getGimbalPole (float[] quat) {
-    float x = quat[0];
-    float y = quat[1];
-    float z = quat[2];
-    float w = quat[3];
-    final float t = y * x + z * w;
-    return t > 0.499f ? 1 : (t < -0.499f ? -1 : 0);
-  }
-
-  /** Get the roll euler angle in radians, which is the rotation around the z axis. Requires that this quaternion is normalized.
-   * @return the rotation around the z axis in radians (between -PI and +PI) */
-  public float getRollRad (float[] quat) {
-    float x = quat[0];
-    float y = quat[1];
-    float z = quat[2];
-    float w = quat[3];
-    final int pole = getGimbalPole(quat);
-    return (float) (pole == 0 ? Math.atan2((double)(2f * (w * z + y * x)), (double)(1f - 2f * (x * x + z * z))) : (float)pole * 2f
-            * Math.atan2(y, w));
-  }
-
-  /** Get the roll euler angle in degrees, which is the rotation around the z axis. Requires that this quaternion is normalized.
-   * @return the rotation around the z axis in degrees (between 0 and 360) */
-  public float getRoll (float[] quat) {
-    float[] newquat = normalizeQuat(quat);
-    float degreeReturn = (float)Math.toDegrees((double)getRollRad(newquat)); // +180 to return between 0 and 360
-
-//    //-90 to 180
-    if(-90f <= degreeReturn && degreeReturn <= 180f) {
-      return degreeReturn + 90f;
-    }
-    else {
-      //-180 to -90
-      return degreeReturn + 180 + 270;
-    }
   }
 
   public void updateTeapotRotation(int teapotIndex, float degrees) {
     teapotDegrees[teapotIndex] = degrees;
+  }
+
+  public void updateCameraRotateForPickUp(float[] newRotation) {
+    cameraRotateForPickUp = newRotation;
   }
 
   public void changeByOffsetTeapotRotation(int teapotIndex, float offsetDegrees) {
