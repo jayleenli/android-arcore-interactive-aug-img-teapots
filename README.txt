@@ -15,13 +15,10 @@ Difficulties:
 - I found a teapot model online off of Google poly, but the model was not centered at the origin. This caused a lot of headaches when trying to rotate it around the axis to do the interaction. I spent a majority of this assignment trying to figure out the math of how to rotate the object and translate it back to the anchor that it was located at. 
 - Other difficulties was different libraries did rotations differently. Some started with axis x on a coordinate system, others started with y, so translating them to be consistent (I choose from y and going counter clockwise) also caused difficulty.
 -quarternion translation system is not very intuitive but Euler system is. Going back and forth from them was hard to keep track of.
--Rotation axis rules change depending on object. For example, the camera in ARCore is like OpenGL (OpenGL camera pose with +X pointing right, +Y pointing right up, and -Z pointing in the direction the camera is looking) but augmented img has rotation axis (pos y pointing outwards from the img, neg z pointing downwards parellel to img, and pos x pointing to the right). 
+-Rotation axis rules change depending on object. For example, the camera in ARCore is like OpenGL (OpenGL camera pose with +X pointing right, +Y pointing right up, and -Z pointing in the direction the camera is looking) but augmented img has rotation axis (pos y pointing outwards from the img, pos z pointing downwards parellel to img, and pos x pointing to the right). 
+-See comment in code above getTranslationToCenterCircle() function for my attempt to explain why this was so frustrating. I forgot a bit of the steps since I did it a while back but I think I was able to follow my logic again to document it better.
 -Stayed with the default augmentedImages hello world for Android image because it did better when moving camera close to img. I tried a black and white QR code tracker but it didn't do so well.
 
-      x 
-      |
-y ---------
-      |
 
 External Sources:
 -Used this library to find out how to translate between Quaternions and euler
